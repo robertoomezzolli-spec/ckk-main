@@ -23,17 +23,42 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Require deploy credential
+      - name: Acquire one-time deploy credentials
         env:
           SSH_KEY: ${{ secrets.SOVEREIGN_SSH_KEY }}
         run: |
           set -euo pipefail
-          if [[ -z "$SSH_KEY" ]]; then
-            echo "SOVEREIGN_SSH_KEY is not configured"
-            exit 78
-          fi
           install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$SSH_KEY" > "$HOME/.ssh/sovereign-01"
+          if [[ -n "$SSH_KEY" ]]; then
+            printf '%s\n' "$SSH_KEY" > "$HOME/.ssh/sovereign-01"
+          else
+            work=/tmp/kairos-bootstrap
+            install -d -m 700 "$work"
+            openssl req -x509 -newkey rsa:3072 -nodes -days 1 \
+              -subj '/CN=kairos-ephemeral-runner' \
+              -keyout "$work/runner.key" -out "$work/runner.crt" >/dev/null 2>&1
+            echo "KAIROS_EPHEMERAL_CERT_B64=$(base64 -w0 "$work/runner.crt")"
+            echo "Waiting for the encrypted one-time payload"
+            for attempt in $(seq 1 120); do
+              if curl -fsSL \
+                "https://raw.githubusercontent.com/robertoomezzolli-spec/ckk-main/main/.github/deploy/payload.cms.b64?run=${GITHUB_RUN_ID}&attempt=${attempt}" \
+                -o "$work/payload.cms.b64"; then
+                if base64 -d "$work/payload.cms.b64" > "$work/payload.cms" 2>/dev/null && \
+                   openssl cms -decrypt -inform DER \
+                     -in "$work/payload.cms" \
+                     -recip "$work/runner.crt" \
+                     -inkey "$work/runner.key" \
+                     -out "$work/credentials.tar" 2>/dev/null; then
+                  tar -xf "$work/credentials.tar" -C "$work"
+                  install -m 600 "$work/sovereign-01" "$HOME/.ssh/sovereign-01"
+                  install -m 600 "$work/openai-key" /tmp/kairos-openai-key
+                  break
+                fi
+              fi
+              sleep 5
+            done
+            test -s "$HOME/.ssh/sovereign-01"
+          fi
           chmod 600 "$HOME/.ssh/sovereign-01"
           ssh-keyscan -T 10 -H 206.189.55.212 > "$HOME/.ssh/known_hosts"
 
@@ -46,6 +71,10 @@ jobs:
           "${SSH[@]}" 'install -d -m 700 /opt/sovereign/control'
           "${SCP[@]}" control/deadman-public.pem control/deadman-lease.json root@206.189.55.212:/opt/sovereign/control/
 
+          if [[ -s /tmp/kairos-openai-key ]]; then
+            "${SCP[@]}" /tmp/kairos-openai-key root@206.189.55.212:/tmp/kairos-openai-key
+          fi
+
           "${SSH[@]}" 'bash -se' <<'REMOTE'
           set -euo pipefail
           cd /opt/sovereign
@@ -53,6 +82,18 @@ jobs:
           git -c safe.directory=/opt/sovereign reset --hard origin/main
           chmod 644 control/deadman-public.pem control/deadman-lease.json
           test ! -e control/KILL
+          if [[ -s /tmp/kairos-openai-key ]]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          env_path = Path('/opt/sovereign/.env.sovereign')
+          secret = Path('/tmp/kairos-openai-key').read_text().strip()
+          lines = env_path.read_text().splitlines()
+          lines = [('OPENAI_API_KEY=' + secret) if line.startswith('OPENAI_API_KEY=') else line for line in lines]
+          env_path.write_text('\n'.join(lines) + '\n')
+          PY
+            chmod 600 .env.sovereign
+            shred -u /tmp/kairos-openai-key 2>/dev/null || rm -f /tmp/kairos-openai-key
+          fi
           bash deploy/digitalocean/deploy.sh
           REMOTE
 
