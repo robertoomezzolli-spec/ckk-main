@@ -87,8 +87,10 @@ Keep the new number unused in consumer WhatsApp until Cloud API registration is
 complete. The roles are deliberately different:
 
 - eSIM number: the organism's WhatsApp Business sender,
-- `OWNER_WA_ID`: Roberto's existing personal WhatsApp number, the only admitted
-  inbound sender,
+- `OWNER_WA_ID`: Roberto's existing personal WhatsApp number, the primary
+  admitted sender,
+- `WHATSAPP_ALLOWED_WA_IDS`: optional comma-separated additional people who may
+  converse with the organism,
 - `WHATSAPP_PHONE_NUMBER_ID`: Meta's generated numeric asset ID for the eSIM.
 
 ## 6. Collect the four Meta values
@@ -117,7 +119,8 @@ In the app's WhatsApp webhook configuration:
 
 Meta first performs a GET challenge. Afterwards signed POST events enter the
 durable queue. The host rejects wrong signatures, other business phone IDs and
-every sender except `OWNER_WA_ID`.
+every sender except `OWNER_WA_ID` and the explicitly configured
+`WHATSAPP_ALLOWED_WA_IDS`.
 
 ## 8. Production transition
 

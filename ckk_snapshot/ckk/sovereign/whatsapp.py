@@ -42,6 +42,11 @@ class WhatsAppConfig:
     allowed_templates: frozenset[str] = frozenset()
     maximum_proactive_per_day: int = 3
     template_language_code: str = "en_US"
+    additional_wa_ids: frozenset[str] = frozenset()
+
+    @property
+    def admitted_wa_ids(self) -> frozenset[str]:
+        return frozenset({self.owner_wa_id, *self.additional_wa_ids})
 
 
 @dataclass(frozen=True)
@@ -73,6 +78,21 @@ def extract_delivery_statuses(raw_body: bytes) -> tuple[WhatsAppDeliveryStatus, 
 class WhatsAppInbox:
     config: WhatsAppConfig
     last_owner_message_at: int | None = None
+    last_message_at_by_sender: dict[str, int] = field(default_factory=dict)
+
+    def record_message(self, sender: str, timestamp: int) -> None:
+        self.last_message_at_by_sender[sender] = max(
+            self.last_message_at_by_sender.get(sender, 0), timestamp
+        )
+        if sender == self.config.owner_wa_id:
+            self.last_owner_message_at = max(self.last_owner_message_at or 0, timestamp)
+
+    def last_message_at(self, sender: str) -> int | None:
+        if sender in self.last_message_at_by_sender:
+            return self.last_message_at_by_sender[sender]
+        if sender == self.config.owner_wa_id:
+            return self.last_owner_message_at
+        return None
 
     def parse(self, raw_body: bytes, signature: str, app_secret: str) -> tuple[Observation, ...]:
         if not verify_webhook_signature(raw_body, signature, app_secret):
@@ -93,8 +113,8 @@ class WhatsAppInbox:
 
     def _message_to_observation(self, message: Mapping[str, Any]) -> Observation:
         sender = str(message.get("from", ""))
-        if sender != self.config.owner_wa_id:
-            raise PermissionError("sender is not the admitted owner")
+        if sender not in self.config.admitted_wa_ids:
+            raise PermissionError("sender is not admitted")
         message_id = str(message.get("id", ""))
         timestamp = int(message.get("timestamp", "0"))
         if not message_id or timestamp <= 0:
@@ -119,7 +139,7 @@ class WhatsAppInbox:
             }
         else:
             raise ValueError(f"unsupported WhatsApp message type: {message_type}")
-        self.last_owner_message_at = max(self.last_owner_message_at or 0, timestamp)
+        self.record_message(sender, timestamp)
         return Observation(
             observation_id=f"wa:{message_id}",
             sensor=f"whatsapp:{sender}",
@@ -142,14 +162,16 @@ class WhatsAppSimulationActuator:
 
     def execute(self, intent: Intent) -> Effect:
         payload = dict(intent.payload)
-        if str(payload.get("to", "")) != self.config.owner_wa_id:
-            raise PermissionError("outbound recipient is not the admitted owner")
+        recipient = str(payload.get("to", ""))
+        if recipient not in self.config.admitted_wa_ids:
+            raise PermissionError("outbound recipient is not admitted")
         mode = str(payload.get("mode", "service"))
         current = int(self.now())
         if mode == "service":
-            if self.inbox.last_owner_message_at is None:
+            last_message_at = self.inbox.last_message_at(recipient)
+            if last_message_at is None:
                 raise PermissionError("no customer-service window exists")
-            if current - self.inbox.last_owner_message_at > SERVICE_WINDOW_SECONDS:
+            if current - last_message_at > SERVICE_WINDOW_SECONDS:
                 raise PermissionError("free-form service window is closed")
             if not str(payload.get("text", "")).strip():
                 raise ValueError("service message text is empty")
@@ -275,11 +297,14 @@ class WhatsAppCloudActuator(WhatsAppSimulationActuator):
         return effect
 
 
-def service_intent(config: WhatsAppConfig, text: str, reason: str) -> Intent:
+def service_intent(config: WhatsAppConfig, text: str, reason: str, recipient: str | None = None) -> Intent:
+    recipient = recipient or config.owner_wa_id
+    if recipient not in config.admitted_wa_ids:
+        raise PermissionError("service recipient is not admitted")
     return Intent(
         action="send_whatsapp",
         capability="whatsapp.send",
-        payload={"to": config.owner_wa_id, "mode": "service", "text": text},
+        payload={"to": recipient, "mode": "service", "text": text},
         reason=reason,
     )
 

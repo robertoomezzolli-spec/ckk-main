@@ -70,7 +70,7 @@ class SovereignBrainHostingTests(unittest.TestCase):
     def test_brain_has_no_seeded_persona_and_maps_schema_to_service_intent(self):
         client = FakeClient(decision("service_message", "Hallo"))
         config = WhatsAppConfig(OWNER, "phone")
-        brain = OpenAIResponsesCognition(config, client=client, service_window_provider=lambda: True)
+        brain = OpenAIResponsesCognition(config, client=client, service_window_provider=lambda recipient: True)
         observation = Observation("wa:1", f"whatsapp:{OWNER}", "message.text", {"text": "Hi"}, 1.0)
         result = brain.reflect((observation,), (), {}, BootstrapLaws())
         self.assertEqual(result.intent.payload["to"], OWNER)
@@ -90,11 +90,24 @@ class SovereignBrainHostingTests(unittest.TestCase):
         brain = OpenAIResponsesCognition(
             WhatsAppConfig(OWNER, "phone"),
             client=FakeClient(decision()),
-            service_window_provider=lambda: True,
+            service_window_provider=lambda recipient: True,
         )
         observation = Observation("wa:1", f"whatsapp:{OWNER}", "message.text", {"text": "Hi"}, 1.0)
         with self.assertRaisesRegex(ValueError, "requires a service reply"):
             brain.reflect((observation,), (), {}, BootstrapLaws())
+
+    def test_direct_reply_is_pinned_to_the_actual_admitted_sender(self):
+        additional = "491609876543"
+        client = FakeClient(decision("service_message", "Hallo"))
+        config = WhatsAppConfig(OWNER, "phone", additional_wa_ids=frozenset({additional}))
+        brain = OpenAIResponsesCognition(
+            config,
+            client=client,
+            service_window_provider=lambda recipient: recipient == additional,
+        )
+        observation = Observation("wa:2", f"whatsapp:{additional}", "message.text", {"text": "Hi"}, 1.0)
+        result = brain.reflect((observation,), (), {}, BootstrapLaws())
+        self.assertEqual(result.intent.payload["to"], additional)
 
     def test_brain_cannot_forge_learning_evidence(self):
         learning = [{"key": "self.name", "value": "X", "confidence": 0.9, "evidence_ids": ["fake"], "reason": "no"}]

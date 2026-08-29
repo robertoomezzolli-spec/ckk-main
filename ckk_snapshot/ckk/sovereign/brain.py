@@ -60,7 +60,7 @@ class OpenAIResponsesCognition:
     client: ResponsesClient | None = None
     model: str = "gpt-5.6"
     history_provider: Callable[[int], list[dict[str, Any]]] = lambda limit: []
-    service_window_provider: Callable[[], bool] = lambda: False
+    service_window_provider: Callable[[str | None], bool] = lambda recipient: False
     history_limit: int = 24
 
     def __post_init__(self) -> None:
@@ -77,15 +77,29 @@ class OpenAIResponsesCognition:
         laws: BootstrapLaws,
     ) -> CognitionResult:
         current_ids = {item.observation_id for item in observations}
-        service_available = bool(self.service_window_provider())
-        direct_message = any(
-            item.sensor.startswith("whatsapp:") and item.kind.startswith("message.")
+        direct_sensors = {
+            item.sensor
             for item in observations
-        )
+            if item.sensor.startswith("whatsapp:") and item.kind.startswith("message.")
+        }
+        if len(direct_sensors) > 1:
+            raise ValueError("one cognition cycle cannot mix WhatsApp senders")
+        direct_sensor = next(iter(direct_sensors), None)
+        reply_to = direct_sensor.removeprefix("whatsapp:") if direct_sensor else None
+        service_available = bool(self.service_window_provider(reply_to))
+        direct_message = direct_sensor is not None
+        recent_episodes = self.history_provider(max(self.history_limit, 1000))
+        if direct_sensor:
+            recent_episodes = [
+                episode
+                for episode in recent_episodes
+                if str((episode.get("observation") or {}).get("sensor", "")) == direct_sensor
+            ]
+        recent_episodes = recent_episodes[-self.history_limit :]
         payload = {
             "immutable_laws": asdict(laws),
             "committed_beliefs": learned_context,
-            "recent_episodes": self.history_provider(self.history_limit),
+            "recent_episodes": recent_episodes,
             "current_observations": [asdict(item) for item in observations],
             "memory_head": asdict(memory[-1]) if memory else None,
             "available_outputs": {
@@ -130,7 +144,7 @@ class OpenAIResponsesCognition:
         if direct_message and service_available and raw.get("action") != "service_message":
             raise ValueError("direct inbound WhatsApp message requires a service reply")
         proposals = tuple(self._proposal(item, current_ids) for item in raw["learning"])
-        intent = self._intent(raw)
+        intent = self._intent(raw, reply_to)
         return CognitionResult(intent=intent, learning=proposals, salience=float(raw["salience"]))
 
     def _proposal(self, raw: dict[str, Any], current_ids: set[str]) -> LearningProposal:
@@ -145,7 +159,7 @@ class OpenAIResponsesCognition:
             reason=str(raw["reason"]),
         )
 
-    def _intent(self, raw: dict[str, Any]) -> Intent | None:
+    def _intent(self, raw: dict[str, Any], reply_to: str | None = None) -> Intent | None:
         action = raw["action"]
         reason = str(raw["reason"])
         if action == "silence":
@@ -154,7 +168,7 @@ class OpenAIResponsesCognition:
             text = str(raw.get("text") or "").strip()
             if not text:
                 raise ValueError("service_message requires text")
-            return service_intent(self.whatsapp, text, reason)
+            return service_intent(self.whatsapp, text, reason, reply_to)
         if action == "template_message":
             template = str(raw.get("template") or "").strip()
             if template not in self.whatsapp.allowed_templates:

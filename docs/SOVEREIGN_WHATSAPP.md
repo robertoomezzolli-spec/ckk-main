@@ -51,7 +51,8 @@ Real activation needs user-controlled infrastructure and credentials:
 - permanent access token or system-user token,
 - WhatsApp phone-number ID,
 - Meta app secret and webhook verify token,
-- Roberto's exact WhatsApp ID/number as sole admitted owner,
+- Roberto's exact WhatsApp ID/number as primary owner and any deliberately
+  admitted additional IDs in `WHATSAPP_ALLOWED_WA_IDS`,
 - one approved proactive template,
 - public HTTPS webhook deployment.
 

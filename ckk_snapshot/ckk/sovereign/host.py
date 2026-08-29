@@ -69,6 +69,7 @@ class HostSettings:
     meta_app_secret: str
     meta_verify_token: str
     whatsapp_access_token: str
+    allowed_wa_ids: tuple[str, ...] = ()
     openai_model: str = "gpt-5.6"
     state_path: str = "/data/sovereign.sqlite3"
     allowed_templates: tuple[str, ...] = ()
@@ -89,8 +90,12 @@ class HostSettings:
         if missing:
             raise RuntimeError("missing required settings: " + ", ".join(missing))
         templates = tuple(item.strip() for item in os.getenv("WHATSAPP_ALLOWED_TEMPLATES", "").split(",") if item.strip())
+        allowed_wa_ids = tuple(
+            item.strip() for item in os.getenv("WHATSAPP_ALLOWED_WA_IDS", "").split(",") if item.strip()
+        )
         return cls(
             **required,
+            allowed_wa_ids=allowed_wa_ids,
             openai_model=os.getenv("OPENAI_MODEL", "gpt-5.6"),
             state_path=os.getenv("SOVEREIGN_STATE_PATH", "/data/sovereign.sqlite3"),
             allowed_templates=templates,
@@ -112,6 +117,7 @@ def build_organism(
         settings.business_phone_number_id,
         frozenset(settings.allowed_templates),
         template_language_code=settings.template_language_code,
+        additional_wa_ids=frozenset(settings.allowed_wa_ids),
     )
     inbox = WhatsAppInbox(config)
     actuator_args = {
@@ -125,7 +131,7 @@ def build_organism(
     admitted_actuator = DeadmanActuator(actuator, deadman) if deadman is not None else actuator
     runtime = SovereignRuntime(
         ingress=IngressPolicy(
-            frozenset({"internal.clock", f"whatsapp:{settings.owner_wa_id}"}),
+            frozenset({"internal.clock", *(f"whatsapp:{item}" for item in config.admitted_wa_ids)}),
             frozenset({"clock.tick", "message.text", "message.document", "message.image", "message.audio"}),
             maximum_payload_bytes=64 * 1024,
         ),
@@ -137,15 +143,17 @@ def build_organism(
         client=client,
         model=settings.openai_model,
         history_provider=store.recent_episodes,
-        service_window_provider=lambda: (
-            inbox.last_owner_message_at is not None
-            and int(time.time()) - inbox.last_owner_message_at <= SERVICE_WINDOW_SECONDS
+        service_window_provider=lambda recipient: (
+            recipient is not None
+            and inbox.last_message_at(recipient) is not None
+            and int(time.time()) - int(inbox.last_message_at(recipient) or 0) <= SERVICE_WINDOW_SECONDS
         ),
     )
     organism = SovereignOrganism(runtime, brain)
     store.restore(organism)
-    last_owner, proactive = store.communication_state()
-    inbox.last_owner_message_at = last_owner
+    windows, proactive = store.communication_state()
+    inbox.last_message_at_by_sender.update(windows)
+    inbox.last_owner_message_at = windows.get(config.owner_wa_id)
     actuator.proactive_timestamps = proactive
     return organism, inbox
 
@@ -166,7 +174,7 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
         try:
             if observation.sensor.startswith("whatsapp:") and observation.payload.get("timestamp") is not None:
                 timestamp = int(observation.payload["timestamp"])
-                inbox.last_owner_message_at = max(inbox.last_owner_message_at or 0, timestamp)
+                inbox.record_message(observation.sensor.removeprefix("whatsapp:"), timestamp)
             organism.perceive(observation)
             effect = organism.think()
             commit = organism.sleep()

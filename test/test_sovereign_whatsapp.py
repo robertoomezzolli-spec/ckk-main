@@ -27,6 +27,7 @@ from ckk.sovereign.whatsapp import (  # noqa: E402
 
 SECRET = "app-secret"
 OWNER = "491701234567"
+ADDITIONAL = "491609876543"
 PHONE_ID = "phone-1"
 
 
@@ -102,6 +103,28 @@ class SovereignWhatsAppTests(unittest.TestCase):
         raw, signature = signed(webhook({"id": "m1", "from": "other", "timestamp": "100", "type": "text", "text": {"body": "hi"}}))
         with self.assertRaises(PermissionError):
             self.inbox.parse(raw, signature, SECRET)
+
+    def test_additional_admitted_sender_has_an_independent_reply_window(self):
+        config = WhatsAppConfig(OWNER, PHONE_ID, additional_wa_ids=frozenset({ADDITIONAL}))
+        inbox = WhatsAppInbox(config)
+        raw, signature = signed(
+            webhook(
+                {
+                    "id": "m-additional",
+                    "from": ADDITIONAL,
+                    "timestamp": "100",
+                    "type": "text",
+                    "text": {"body": "hi"},
+                }
+            )
+        )
+        observation = inbox.parse(raw, signature, SECRET)[0]
+        self.assertEqual(observation.sensor, f"whatsapp:{ADDITIONAL}")
+        self.assertEqual(inbox.last_message_at(ADDITIONAL), 100)
+        self.assertIsNone(inbox.last_message_at(OWNER))
+        actuator = WhatsAppSimulationActuator(config, inbox, now=lambda: 100)
+        effect = actuator.execute(service_intent(config, "hello", "reply", ADDITIONAL))
+        self.assertEqual(effect.output["would_send"]["to"], ADDITIONAL)
 
     def test_delivery_receipts_are_extracted_without_becoming_observations(self):
         payload = {

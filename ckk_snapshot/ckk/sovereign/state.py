@@ -99,20 +99,22 @@ class SQLiteStateStore:
             ).fetchall()
         return [json.loads(row["episode_json"]) for row in reversed(rows)]
 
-    def communication_state(self) -> tuple[int | None, list[int]]:
+    def communication_state(self) -> tuple[dict[str, int], list[int]]:
         """Recover service-window and proactive budget state after restart."""
-        last_owner = None
+        windows: dict[str, int] = {}
         proactive: list[int] = []
         for episode in self.recent_episodes(1000):
             observation = episode.get("observation") or {}
-            if str(observation.get("sensor", "")).startswith("whatsapp:"):
+            sensor = str(observation.get("sensor", ""))
+            if sensor.startswith("whatsapp:"):
                 timestamp = (observation.get("payload") or {}).get("timestamp")
                 if timestamp is not None:
-                    last_owner = max(last_owner or 0, int(timestamp))
+                    sender = sensor.removeprefix("whatsapp:")
+                    windows[sender] = max(windows.get(sender, 0), int(timestamp))
             output = (episode.get("effect") or {}).get("output") or {}
             if output.get("mode") == "template" and output.get("sent_at") is not None:
                 proactive.append(int(output["sent_at"]))
-        return last_owner, proactive
+        return windows, proactive
 
     def queue_stats(self) -> dict[str, int]:
         with self._lock:
