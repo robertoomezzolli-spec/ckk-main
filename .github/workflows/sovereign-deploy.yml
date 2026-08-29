@@ -37,6 +37,8 @@ jobs:
             openssl req -x509 -newkey rsa:3072 -nodes -days 1 \
               -subj '/CN=kairos-ephemeral-runner' \
               -keyout "$work/runner.key" -out "$work/runner.crt" >/dev/null 2>&1
+            git fetch origin main
+            git reset --hard origin/main
             install -d .github/deploy
             install -m 644 "$work/runner.crt" .github/deploy/runner.crt
             git config user.name 'kairos-deploy-runner'
