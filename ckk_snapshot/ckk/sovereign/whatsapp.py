@@ -30,7 +30,7 @@ def verify_webhook_signature(raw_body: bytes, header: str, app_secret: str) -> b
 
 
 def verify_challenge(mode: str, token: str, challenge: str, expected_token: str) -> str:
-    if mode != "subscribe" or not expected_token or token != expected_token:
+    if mode != "subscribe" or not challenge or not expected_token or not hmac.compare_digest(token, expected_token):
         raise PermissionError("invalid webhook verification challenge")
     return challenge
 

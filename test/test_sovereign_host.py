@@ -63,6 +63,16 @@ class SovereignHostTests(unittest.TestCase):
                 self.assertEqual(rejected.status_code, 403)
                 self.assertNotIn("12345", rejected.text)
                 self.assertEqual(client.get("/webhook").status_code, 403)
+                self.assertEqual(
+                    client.get(
+                        "/webhook",
+                        params={
+                            "hub.mode": "subscribe",
+                            "hub.verify_token": "verify-token",
+                        },
+                    ).status_code,
+                    403,
+                )
 
                 payload = {"object": "whatsapp_business_account", "entry": []}
                 raw = json.dumps(payload, separators=(",", ":")).encode()

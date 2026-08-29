@@ -51,6 +51,8 @@ class SovereignWhatsAppTests(unittest.TestCase):
         self.assertEqual(verify_challenge("subscribe", "token", "123", "token"), "123")
         with self.assertRaises(PermissionError):
             verify_challenge("subscribe", "wrong", "123", "token")
+        with self.assertRaises(PermissionError):
+            verify_challenge("subscribe", "token", "", "token")
 
     def test_invalid_signature_is_rejected(self):
         raw, _ = signed(webhook({"id": "m1", "from": OWNER, "timestamp": "100", "type": "text", "text": {"body": "hi"}}))
