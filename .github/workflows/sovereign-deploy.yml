@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: sovereign-production
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
