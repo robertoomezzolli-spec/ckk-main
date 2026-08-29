@@ -1,0 +1,70 @@
+name: Sovereign production deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/sovereign-deploy.yml"
+      - "control/deadman-public.pem"
+      - "control/deadman-lease.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sovereign-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require deploy credential
+        env:
+          SSH_KEY: ${{ secrets.SOVEREIGN_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SSH_KEY" ]]; then
+            echo "SOVEREIGN_SSH_KEY is not configured"
+            exit 78
+          fi
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_KEY" > "$HOME/.ssh/sovereign-01"
+          chmod 600 "$HOME/.ssh/sovereign-01"
+          ssh-keyscan -T 10 -H 206.189.55.212 > "$HOME/.ssh/known_hosts"
+
+      - name: Install control plane and deploy
+        run: |
+          set -euo pipefail
+          SSH=(ssh -i "$HOME/.ssh/sovereign-01" -o BatchMode=yes -o StrictHostKeyChecking=yes root@206.189.55.212)
+          SCP=(scp -i "$HOME/.ssh/sovereign-01" -o BatchMode=yes -o StrictHostKeyChecking=yes)
+
+          "${SSH[@]}" 'install -d -m 700 /opt/sovereign/control'
+          "${SCP[@]}" control/deadman-public.pem control/deadman-lease.json root@206.189.55.212:/opt/sovereign/control/
+
+          "${SSH[@]}" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd /opt/sovereign
+          git -c safe.directory=/opt/sovereign fetch origin main
+          git -c safe.directory=/opt/sovereign reset --hard origin/main
+          chmod 644 control/deadman-public.pem control/deadman-lease.json
+          test ! -e control/KILL
+          bash deploy/digitalocean/deploy.sh
+          REMOTE
+
+      - name: Verify HTTPS health
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            if body=$(curl --fail --silent --show-error --max-time 10 https://kairos.206-189-55-212.sslip.io/healthz); then
+              echo "KAIROS_HEALTH_OK $body"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "KAIROS health check failed"
+          exit 1
