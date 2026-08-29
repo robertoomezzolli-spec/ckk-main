@@ -10,7 +10,7 @@ on:
       - "control/deadman-lease.json"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: sovereign-production
@@ -37,7 +37,13 @@ jobs:
             openssl req -x509 -newkey rsa:3072 -nodes -days 1 \
               -subj '/CN=kairos-ephemeral-runner' \
               -keyout "$work/runner.key" -out "$work/runner.crt" >/dev/null 2>&1
-            echo "KAIROS_EPHEMERAL_CERT_B64=$(base64 -w0 "$work/runner.crt")"
+            install -d .github/deploy
+            install -m 644 "$work/runner.crt" .github/deploy/runner.crt
+            git config user.name 'kairos-deploy-runner'
+            git config user.email 'kairos-deploy@users.noreply.github.com'
+            git add .github/deploy/runner.crt
+            git commit -m "Publish ephemeral deploy certificate [skip ci]"
+            git push origin HEAD:main
             echo "Waiting for the encrypted one-time payload"
             for attempt in $(seq 1 120); do
               if curl -fsSL \
@@ -109,3 +115,18 @@ jobs:
           done
           echo "KAIROS health check failed"
           exit 1
+
+      - name: Remove one-time encrypted material
+        if: always()
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          rm -f .github/deploy/runner.crt .github/deploy/payload.cms.b64
+          if [[ -n "$(git status --short)" ]]; then
+            git config user.name 'kairos-deploy-runner'
+            git config user.email 'kairos-deploy@users.noreply.github.com'
+            git add -A .github/deploy
+            git commit -m "Remove one-time deploy payload [skip ci]"
+            git push origin HEAD:main
+          fi
