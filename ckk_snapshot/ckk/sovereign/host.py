@@ -8,6 +8,9 @@ import os
 import time
 from typing import Any
 
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
+
 from .brain import OpenAIResponsesCognition
 from .deadman import DeadmanActuator, DeadmanGuard, DeadmanState
 from .organism import SovereignOrganism
@@ -111,9 +114,6 @@ def build_organism(
 
 
 def create_app(settings: HostSettings | None = None, client: Any = None, transport: Any = None):
-    from fastapi import FastAPI, HTTPException, Request
-    from fastapi.responses import JSONResponse, PlainTextResponse
-
     settings = settings or HostSettings.from_env()
     os.makedirs(os.path.dirname(os.path.abspath(settings.state_path)), exist_ok=True)
     store = SQLiteStateStore(settings.state_path)

@@ -24,6 +24,8 @@ services:
   backup:
     image: ckk-sovereign:local
     restart: unless-stopped
+    healthcheck:
+      disable: true
     depends_on:
       organism:
         condition: service_healthy
