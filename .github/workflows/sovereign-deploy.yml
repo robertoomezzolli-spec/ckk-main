@@ -8,6 +8,7 @@ on:
       - ".github/workflows/sovereign-deploy.yml"
       - "control/deadman-public.pem"
       - "control/deadman-lease.json"
+      - "deploy/digitalocean/Caddyfile"
 
 permissions:
   contents: write
