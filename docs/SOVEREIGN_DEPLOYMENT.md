@@ -21,6 +21,22 @@ actuator access.
 
 ## Start
 
+Create the dead-man signing key on an offline owner device. Never copy the
+private key to the server:
+
+```bash
+PYTHONPATH=ckk_snapshot python scripts/deadman-control.py keygen \
+  --private roberto.deadman-private.pem --public control/deadman-public.pem
+PYTHONPATH=ckk_snapshot python scripts/deadman-control.py renew \
+  --private roberto.deadman-private.pem --output control/deadman-lease.json
+```
+
+The signed lease permits processing for 24 hours. After that, the queue and all
+outputs/learning freeze. After 72 hours, ingress is rejected. An operator can
+force immediate quarantine with `touch control/KILL`. The control directory is
+mounted read-only into the organism; only the public key and signed lease reach
+the host.
+
 ```bash
 cp .env.sovereign.example .env.sovereign
 # Fill the six required secrets/IDs.

@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from .brain import OpenAIResponsesCognition
+from .deadman import DeadmanActuator, DeadmanGuard, DeadmanState
 from .organism import SovereignOrganism
 from .runtime import CapabilityPolicy, IngressPolicy, Observation, RuntimePhase, SovereignRuntime
 from .state import SQLiteStateStore
@@ -33,6 +34,7 @@ class HostSettings:
     allowed_templates: tuple[str, ...] = ()
     template_language_code: str = "en_US"
     clock_interval_seconds: int = 900
+    deadman_control_dir: str = "/control"
 
     @classmethod
     def from_env(cls) -> "HostSettings":
@@ -54,10 +56,17 @@ class HostSettings:
             allowed_templates=templates,
             template_language_code=os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en_US"),
             clock_interval_seconds=int(os.getenv("CLOCK_INTERVAL_SECONDS", "900")),
+            deadman_control_dir=os.getenv("DEADMAN_CONTROL_DIR", "/control"),
         )
 
 
-def build_organism(settings: HostSettings, store: SQLiteStateStore, client: Any = None, transport: Any = None):
+def build_organism(
+    settings: HostSettings,
+    store: SQLiteStateStore,
+    client: Any = None,
+    transport: Any = None,
+    deadman: DeadmanGuard | None = None,
+):
     config = WhatsAppConfig(
         settings.owner_wa_id,
         settings.business_phone_number_id,
@@ -73,6 +82,7 @@ def build_organism(settings: HostSettings, store: SQLiteStateStore, client: Any 
     if transport is not None:
         actuator_args["transport"] = transport
     actuator = WhatsAppCloudActuator(**actuator_args)
+    admitted_actuator = DeadmanActuator(actuator, deadman) if deadman is not None else actuator
     runtime = SovereignRuntime(
         ingress=IngressPolicy(
             frozenset({"internal.clock", f"whatsapp:{settings.owner_wa_id}"}),
@@ -80,7 +90,7 @@ def build_organism(settings: HostSettings, store: SQLiteStateStore, client: Any 
             maximum_payload_bytes=64 * 1024,
         ),
         capabilities=CapabilityPolicy(frozenset({"whatsapp.send"}), maximum_effects_per_wake=1),
-        actuators={"whatsapp.send": actuator},
+        actuators={"whatsapp.send": admitted_actuator},
     )
     brain = OpenAIResponsesCognition(
         whatsapp=config,
@@ -108,7 +118,8 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
     os.makedirs(os.path.dirname(os.path.abspath(settings.state_path)), exist_ok=True)
     store = SQLiteStateStore(settings.state_path)
     store.retry_stale()
-    organism, inbox = build_organism(settings, store, client, transport)
+    deadman = DeadmanGuard.from_control_directory(settings.deadman_control_dir)
+    organism, inbox = build_organism(settings, store, client, transport, deadman)
     app = FastAPI(title="Sovereign Fixpoint Organism", docs_url=None, redoc_url=None)
     stop = asyncio.Event()
 
@@ -141,6 +152,9 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
 
     async def worker() -> None:
         while not stop.is_set():
+            if not deadman.evaluate().processing_allowed:
+                await asyncio.sleep(1.0)
+                continue
             observation = store.next_observation()
             if observation is None:
                 await asyncio.sleep(0.5)
@@ -150,6 +164,8 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
     async def clock() -> None:
         while not stop.is_set():
             await asyncio.sleep(settings.clock_interval_seconds)
+            if not deadman.evaluate().processing_allowed:
+                continue
             now = int(time.time())
             store.enqueue((Observation(f"tick:{now}", "internal.clock", "clock.tick", {"unix_time": now}, 1.0),))
 
@@ -166,8 +182,12 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
 
     @app.get("/healthz")
     async def healthz():
+        lease = deadman.evaluate()
         return {
-            "status": "ok",
+            "status": "ok" if lease.state is DeadmanState.ACTIVE else lease.state.value,
+            "deadman": {
+                "state": lease.state.value,
+            },
             "identity": organism.identity,
             "memory_commits": len(organism.runtime.memory),
             "queue": store.queue_stats(),
@@ -187,6 +207,9 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
 
     @app.post("/webhook", status_code=202)
     async def webhook(request: Request):
+        lease = deadman.evaluate()
+        if not lease.ingress_allowed:
+            return JSONResponse({"status": "quarantined"}, status_code=423)
         raw = await request.body()
         signature = request.headers.get("x-hub-signature-256", "")
         try:

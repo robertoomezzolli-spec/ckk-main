@@ -14,6 +14,17 @@ for file in .env.sovereign .env.digitalocean; do
   fi
 done
 
+for file in control/deadman-public.pem control/deadman-lease.json; do
+  if [[ ! -f "$file" ]]; then
+    echo "Missing $file" >&2
+    exit 1
+  fi
+done
+if [[ -f control/KILL ]]; then
+  echo "Refusing deployment while control/KILL exists" >&2
+  exit 1
+fi
+
 docker compose -f docker-compose.digitalocean.yml config --quiet
 docker compose -f docker-compose.digitalocean.yml up -d --build
 docker compose -f docker-compose.digitalocean.yml ps
