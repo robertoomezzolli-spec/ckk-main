@@ -18,6 +18,7 @@ from ckk.sovereign.whatsapp import (  # noqa: E402
     WhatsAppConfig,
     WhatsAppInbox,
     WhatsAppSimulationActuator,
+    extract_delivery_statuses,
     service_intent,
     template_intent,
     verify_challenge,
@@ -101,6 +102,32 @@ class SovereignWhatsAppTests(unittest.TestCase):
         raw, signature = signed(webhook({"id": "m1", "from": "other", "timestamp": "100", "type": "text", "text": {"body": "hi"}}))
         with self.assertRaises(PermissionError):
             self.inbox.parse(raw, signature, SECRET)
+
+    def test_delivery_receipts_are_extracted_without_becoming_observations(self):
+        payload = {
+            "object": "whatsapp_business_account",
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "metadata": {"phone_number_id": PHONE_ID},
+                                "statuses": [
+                                    {"id": "wamid.outbound", "status": "delivered", "timestamp": "102"},
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ],
+        }
+        raw, signature = signed(payload)
+        self.assertEqual(self.inbox.parse(raw, signature, SECRET), ())
+        statuses = extract_delivery_statuses(raw)
+        self.assertEqual(len(statuses), 1)
+        self.assertEqual(statuses[0].message_id, "wamid.outbound")
+        self.assertEqual(statuses[0].status, "delivered")
+        self.assertEqual(statuses[0].timestamp, 102)
 
     def test_agent_may_choose_silence(self):
         actuator = WhatsAppSimulationActuator(self.config, self.inbox, now=lambda: 100)

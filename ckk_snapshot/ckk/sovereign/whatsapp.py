@@ -44,6 +44,31 @@ class WhatsAppConfig:
     template_language_code: str = "en_US"
 
 
+@dataclass(frozen=True)
+class WhatsAppDeliveryStatus:
+    """Non-secret delivery receipt metadata emitted by Meta."""
+
+    message_id: str
+    status: str
+    timestamp: int
+
+
+def extract_delivery_statuses(raw_body: bytes) -> tuple[WhatsAppDeliveryStatus, ...]:
+    """Extract outbound delivery receipts without admitting them as messages."""
+
+    payload = json.loads(raw_body)
+    statuses = []
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            for status in change.get("value", {}).get("statuses", []):
+                message_id = str(status.get("id", ""))
+                state = str(status.get("status", ""))
+                timestamp = int(status.get("timestamp", "0"))
+                if message_id and state and timestamp > 0:
+                    statuses.append(WhatsAppDeliveryStatus(message_id, state, timestamp))
+    return tuple(statuses)
+
+
 @dataclass
 class WhatsAppInbox:
     config: WhatsAppConfig

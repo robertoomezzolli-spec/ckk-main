@@ -23,6 +23,7 @@ from .whatsapp import (
     WhatsAppCloudActuator,
     WhatsAppConfig,
     WhatsAppInbox,
+    extract_delivery_statuses,
     verify_challenge,
 )
 
@@ -248,16 +249,25 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
         signature = request.headers.get("x-hub-signature-256", "")
         try:
             observations = inbox.parse(raw, signature, settings.meta_app_secret)
+            delivery_statuses = extract_delivery_statuses(raw)
             admitted = store.enqueue(observations)
         except (PermissionError, ValueError) as exc:
             logger.warning("WhatsApp webhook rejected reason=%s", exc)
             return JSONResponse({"status": "rejected", "reason": str(exc)}, status_code=403)
         logger.info(
-            "WhatsApp webhook parsed observations=%s admitted=%s duplicates=%s",
+            "WhatsApp webhook parsed observations=%s admitted=%s duplicates=%s delivery_statuses=%s",
             len(observations),
             admitted,
             len(observations) - admitted,
+            len(delivery_statuses),
         )
+        for delivery_status in delivery_statuses:
+            logger.info(
+                "WhatsApp delivery status message_ref=%s status=%s timestamp=%s",
+                _event_ref(delivery_status.message_id),
+                delivery_status.status,
+                delivery_status.timestamp,
+            )
         return {"status": "queued", "admitted": admitted, "duplicates": len(observations) - admitted}
 
     return app
