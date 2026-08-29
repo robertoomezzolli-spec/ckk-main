@@ -27,4 +27,6 @@ fi
 
 docker compose -f docker-compose.digitalocean.yml config --quiet
 docker compose -f docker-compose.digitalocean.yml up -d --build
+docker compose -f docker-compose.digitalocean.yml exec -T caddy \
+  caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
 docker compose -f docker-compose.digitalocean.yml ps
