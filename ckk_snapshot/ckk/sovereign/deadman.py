@@ -68,9 +68,9 @@ class DeadmanGuard:
         )
 
     def evaluate(self) -> DeadmanDecision:
-        if self.kill_path.exists():
-            return DeadmanDecision(DeadmanState.QUARANTINED, "operator kill file present")
         try:
+            if self.kill_path.exists():
+                return DeadmanDecision(DeadmanState.QUARANTINED, "operator kill file present")
             public_key = serialization.load_pem_public_key(self.public_key_path.read_bytes())
             if not isinstance(public_key, Ed25519PublicKey):
                 raise ValueError("dead-man key is not Ed25519")
