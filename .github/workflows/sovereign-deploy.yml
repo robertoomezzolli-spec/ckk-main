@@ -74,7 +74,7 @@ jobs:
           SSH=(ssh -i "$HOME/.ssh/sovereign-01" -o BatchMode=yes -o StrictHostKeyChecking=yes root@206.189.55.212)
           SCP=(scp -i "$HOME/.ssh/sovereign-01" -o BatchMode=yes -o StrictHostKeyChecking=yes)
 
-          "${SSH[@]}" 'install -d -m 700 /opt/sovereign/control'
+          "${SSH[@]}" 'install -d -m 755 /opt/sovereign/control'
           "${SCP[@]}" control/deadman-public.pem control/deadman-lease.json root@206.189.55.212:/opt/sovereign/control/
 
           if [[ -s /tmp/kairos-openai-key ]]; then
