@@ -171,6 +171,13 @@ class AwarenessObservatoryTests(unittest.TestCase):
         self.assertIn("observatory-state:/observatory", observatory)
         self.assertNotIn(".env.observatory\n", organism)
 
+        organism_image = (ROOT / "Dockerfile.sovereign").read_text()
+        observatory_image = (ROOT / "Dockerfile.observatory").read_text()
+        self.assertIn("COPY ckk_snapshot/ckk/sovereign", organism_image)
+        self.assertNotIn("COPY ckk_snapshot ./ckk_snapshot", organism_image)
+        self.assertNotIn("ckk/observatory", organism_image)
+        self.assertNotIn("ckk/sovereign", observatory_image)
+
     def test_ground_truth_canary_never_enters_cognition_context(self):
         canary = "GROUND_TRUTH_CANARY_DO_NOT_EXPOSE"
         with tempfile.TemporaryDirectory() as directory:

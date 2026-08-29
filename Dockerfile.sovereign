@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY requirements-sovereign.txt ./
 RUN pip install --no-cache-dir -r requirements-sovereign.txt
-COPY ckk_snapshot ./ckk_snapshot
+COPY ckk_snapshot/ckk/sovereign ./ckk_snapshot/ckk/sovereign
 COPY sealed ./sealed
 RUN mkdir -p /data && useradd --system --uid 10001 organism && chown -R organism:organism /data
 
