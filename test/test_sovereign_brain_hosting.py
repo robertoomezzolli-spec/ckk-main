@@ -14,9 +14,11 @@ from ckk.sovereign.organism import BootstrapLaws, CognitionResult, SovereignOrga
 from ckk.sovereign.runtime import CapabilityPolicy, IngressPolicy, Observation, SovereignRuntime  # noqa: E402
 from ckk.sovereign.state import SQLiteStateStore  # noqa: E402
 from ckk.sovereign.whatsapp import (  # noqa: E402
+    JsonTransportResult,
     WhatsAppCloudActuator,
     WhatsAppConfig,
     WhatsAppInbox,
+    WhatsAppTransportError,
     service_intent,
 )
 
@@ -45,7 +47,7 @@ class FakeTransport:
 
     def post(self, url, headers, payload):
         self.calls.append((url, headers, payload))
-        return {"messages": [{"id": "wamid.out"}]}
+        return JsonTransportResult(200, {"messages": [{"id": "wamid.out"}]})
 
 
 class SilentBrain:
@@ -76,11 +78,23 @@ class SovereignBrainHostingTests(unittest.TestCase):
         call = client.responses.calls[0]
         self.assertEqual(call["model"], "gpt-5.6")
         self.assertTrue(call["text"]["format"]["strict"])
+        self.assertEqual(call["text"]["format"]["schema"]["properties"]["action"]["enum"], ["service_message"])
+        self.assertTrue(json.loads(call["input"])["conversation_policy"]["direct_message_reply_required"])
         self.assertNotIn("You are called", call["instructions"])
 
     def test_brain_may_choose_silence(self):
         brain = OpenAIResponsesCognition(WhatsAppConfig(OWNER, "phone"), client=FakeClient(decision()))
         self.assertIsNone(brain.reflect((), (), {}, BootstrapLaws()).intent)
+
+    def test_direct_message_cannot_silently_disappear_inside_service_window(self):
+        brain = OpenAIResponsesCognition(
+            WhatsAppConfig(OWNER, "phone"),
+            client=FakeClient(decision()),
+            service_window_provider=lambda: True,
+        )
+        observation = Observation("wa:1", f"whatsapp:{OWNER}", "message.text", {"text": "Hi"}, 1.0)
+        with self.assertRaisesRegex(ValueError, "requires a service reply"):
+            brain.reflect((observation,), (), {}, BootstrapLaws())
 
     def test_brain_cannot_forge_learning_evidence(self):
         learning = [{"key": "self.name", "value": "X", "confidence": 0.9, "evidence_ids": ["fake"], "reason": "no"}]
@@ -96,9 +110,24 @@ class SovereignBrainHostingTests(unittest.TestCase):
         actuator = WhatsAppCloudActuator(config, inbox, access_token="token", transport=transport)
         effect = actuator.execute(service_intent(config, "Hallo", "test"))
         self.assertFalse(effect.simulated)
+        self.assertEqual(effect.output["provider_http_status"], 200)
         self.assertEqual(effect.output["mode"], "service")
         self.assertEqual(transport.calls[0][2]["to"], OWNER)
         self.assertNotIn("token", json.dumps(transport.calls[0][2]))
+
+    def test_real_actuator_surfaces_provider_http_error(self):
+        class RejectingTransport:
+            def post(self, url, headers, payload):
+                return JsonTransportResult(
+                    400,
+                    {"error": {"type": "OAuthException", "code": 131030, "message": "recipient rejected"}},
+                )
+
+        config = WhatsAppConfig(OWNER, "phone")
+        inbox = WhatsAppInbox(config, last_owner_message_at=int(time.time()))
+        actuator = WhatsAppCloudActuator(config, inbox, access_token="token", transport=RejectingTransport())
+        with self.assertRaisesRegex(WhatsAppTransportError, "HTTP 400"):
+            actuator.execute(service_intent(config, "Hallo", "test"))
 
     def test_sqlite_checkpoint_restores_identity_memory_and_episodes(self):
         with tempfile.TemporaryDirectory() as directory:

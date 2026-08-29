@@ -14,7 +14,7 @@ import hmac
 import json
 import time
 from typing import Any, Mapping, Protocol
-from urllib import request
+from urllib import error, request
 
 from .runtime import Effect, Intent, Observation
 
@@ -151,18 +151,49 @@ class WhatsAppSimulationActuator:
 
 
 class JsonTransport(Protocol):
-    def post(self, url: str, headers: Mapping[str, str], payload: Mapping[str, Any]) -> Mapping[str, Any]: ...
+    def post(self, url: str, headers: Mapping[str, str], payload: Mapping[str, Any]) -> "JsonTransportResult": ...
+
+
+@dataclass(frozen=True)
+class JsonTransportResult:
+    status_code: int
+    body: Mapping[str, Any]
+
+
+class WhatsAppTransportError(RuntimeError):
+    def __init__(self, status_code: int, body: Mapping[str, Any]):
+        self.status_code = int(status_code)
+        self.body = dict(body)
+        provider_error = self.body.get("error") if isinstance(self.body.get("error"), Mapping) else {}
+        code = provider_error.get("code", "unknown")
+        error_type = provider_error.get("type", "unknown")
+        message = provider_error.get("message", "unknown provider error")
+        super().__init__(f"WhatsApp Graph API HTTP {self.status_code}: {error_type} {code}: {message}")
 
 
 @dataclass
 class UrllibJsonTransport:
     timeout_seconds: float = 20.0
 
-    def post(self, url: str, headers: Mapping[str, str], payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    def post(self, url: str, headers: Mapping[str, str], payload: Mapping[str, Any]) -> JsonTransportResult:
         body = json.dumps(payload, separators=(",", ":")).encode()
         req = request.Request(url, data=body, headers=dict(headers), method="POST")
-        with request.urlopen(req, timeout=self.timeout_seconds) as response:
-            return json.loads(response.read())
+        try:
+            with request.urlopen(req, timeout=self.timeout_seconds) as response:
+                raw = response.read()
+                parsed = json.loads(raw) if raw else {}
+                if not isinstance(parsed, Mapping):
+                    raise ValueError("WhatsApp Graph API returned a non-object JSON body")
+                return JsonTransportResult(int(response.status), parsed)
+        except error.HTTPError as exc:
+            raw = exc.read()
+            try:
+                parsed = json.loads(raw) if raw else {}
+            except json.JSONDecodeError:
+                parsed = {"error": {"type": "non_json_response", "message": raw.decode(errors="replace")[:500]}}
+            if not isinstance(parsed, Mapping):
+                parsed = {"error": {"type": "non_object_response", "message": str(parsed)[:500]}}
+            raise WhatsAppTransportError(exc.code, parsed) from exc
 
 
 @dataclass
@@ -201,12 +232,19 @@ class WhatsAppCloudActuator(WhatsAppSimulationActuator):
             {"Authorization": f"Bearer {self.access_token}", "Content-Type": "application/json"},
             body,
         )
+        if not 200 <= result.status_code < 300:
+            raise WhatsAppTransportError(result.status_code, result.body)
         effect = Effect(
             intent.intent_id,
             self.capability,
             True,
             False,
-            {"provider": dict(result), "mode": checked.output["mode"], "sent_at": int(self.now())},
+            {
+                "provider": dict(result.body),
+                "provider_http_status": result.status_code,
+                "mode": checked.output["mode"],
+                "sent_at": int(self.now()),
+            },
         )
         self.effects[-1] = effect
         return effect

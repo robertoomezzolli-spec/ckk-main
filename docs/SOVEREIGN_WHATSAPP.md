@@ -3,7 +3,9 @@
 ## Intended behavior
 
 - Roberto can send text and documents to one dedicated WhatsApp Business number.
-- The agent may answer or remain silent; no reply quota is imposed.
+- The agent answers each admitted direct owner message while the customer-service
+  window is open. Silence remains available for clock ticks and other events
+  that do not require a conversational reply.
 - The agent may initiate contact when its wake/sleep process produces a salient
   reason.
 - Conversation and document observations enter the same NREM/REM memory path as
@@ -28,11 +30,12 @@ Roberto to reopen the conversation.
 - `X-Hub-Signature-256` HMAC verification over raw request bytes,
 - pinning to one business phone-number ID and one owner WhatsApp ID,
 - text and document-metadata observations,
-- optional silence from deliberation,
+- mandatory service replies for admitted direct owner messages,
 - free-form service-window enforcement,
 - an allowlist for approved templates,
 - a proactive daily budget,
-- a simulation-only WhatsApp actuator.
+- a policy-complete simulation actuator and a live Cloud API actuator that
+  records Meta's HTTP status and response body in the durable episode.
 
 Document bytes are not trusted merely because their metadata arrived in a
 signed webhook. The media ID is admitted first; a later fetcher must download,
@@ -52,9 +55,10 @@ Real activation needs user-controlled infrastructure and credentials:
 - one approved proactive template,
 - public HTTPS webhook deployment.
 
-The current repository intentionally contains no credential values and no live
-network actuator. Adding the live transport is the next step after these exact
-identities are available.
+The repository intentionally contains no credential values. Production loads
+them from its non-versioned environment file and uses the live Cloud API
+transport only after the same recipient and service-window checks as the
+simulation boundary.
 
 ## Self-learning
 

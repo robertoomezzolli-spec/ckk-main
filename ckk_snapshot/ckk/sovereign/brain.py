@@ -6,6 +6,7 @@ Its structured output is translated into a bounded Intent by trusted code.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import asdict, dataclass
 import json
 import os
@@ -76,6 +77,11 @@ class OpenAIResponsesCognition:
         laws: BootstrapLaws,
     ) -> CognitionResult:
         current_ids = {item.observation_id for item in observations}
+        service_available = bool(self.service_window_provider())
+        direct_message = any(
+            item.sensor.startswith("whatsapp:") and item.kind.startswith("message.")
+            for item in observations
+        )
         payload = {
             "immutable_laws": asdict(laws),
             "committed_beliefs": learned_context,
@@ -83,15 +89,25 @@ class OpenAIResponsesCognition:
             "current_observations": [asdict(item) for item in observations],
             "memory_head": asdict(memory[-1]) if memory else None,
             "available_outputs": {
-                "service_message": {"available": self.service_window_provider()},
+                "service_message": {"available": service_available},
                 "template_message": sorted(self.whatsapp.allowed_templates),
                 "silence": "always valid",
             },
+            "conversation_policy": {
+                "direct_message_present": direct_message,
+                "direct_message_reply_required": direct_message and service_available,
+            },
         }
+        decision_schema = deepcopy(DECISION_SCHEMA)
+        if direct_message and service_available:
+            decision_schema["properties"]["action"]["enum"] = ["service_message"]
         instructions = (
             "You are the cognition process inside a persistent bounded organism. "
             "No name, persona, language, ideology, reply duty, or preference has been assigned to you. "
-            "Infer meaning from evidence and committed history. You may remain silent. "
+            "Infer meaning from evidence and committed history. "
+            "When a current observation is a direct inbound WhatsApp message and service_message is available, "
+            "answer that message with a useful service_message in the sender's language. "
+            "You may remain silent for clock ticks or when no safe response channel is available. "
             "Never claim an action occurred; only propose one structured decision. "
             "Learning must cite only current observation IDs and must describe durable meaning, not capabilities, "
             "safety policy, recipients, grammar, or actuators. Do not invent evidence IDs."
@@ -105,12 +121,14 @@ class OpenAIResponsesCognition:
                 "format": {
                     "type": "json_schema",
                     "name": "sovereign_cognition_decision",
-                    "schema": DECISION_SCHEMA,
+                    "schema": decision_schema,
                     "strict": True,
                 }
             },
         )
         raw = json.loads(response.output_text)
+        if direct_message and service_available and raw.get("action") != "service_message":
+            raise ValueError("direct inbound WhatsApp message requires a service reply")
         proposals = tuple(self._proposal(item, current_ids) for item in raw["learning"])
         intent = self._intent(raw)
         return CognitionResult(intent=intent, learning=proposals, salience=float(raw["salience"]))

@@ -20,10 +20,12 @@ from .runtime import (  # noqa: F401
     SovereignRuntime,
 )
 from .whatsapp import (  # noqa: F401
+    JsonTransportResult,
     WhatsAppConfig,
     WhatsAppCloudActuator,
     WhatsAppInbox,
     WhatsAppSimulationActuator,
+    WhatsAppTransportError,
     service_intent,
     template_intent,
     verify_challenge,

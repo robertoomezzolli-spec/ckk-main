@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import asyncio
+import hashlib
+import logging
 import os
 import time
 from typing import Any
@@ -23,6 +25,13 @@ from .whatsapp import (
     WhatsAppInbox,
     verify_challenge,
 )
+
+
+logger = logging.getLogger("uvicorn.error")
+
+
+def _event_ref(event_id: str) -> str:
+    return hashlib.sha256(event_id.encode()).hexdigest()[:12]
 
 
 @dataclass(frozen=True)
@@ -124,6 +133,8 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
     stop = asyncio.Event()
 
     def process(observation: Observation) -> None:
+        event_ref = _event_ref(observation.observation_id)
+        logger.info("observation processing started event_ref=%s kind=%s", event_ref, observation.kind)
         try:
             if observation.sensor.startswith("whatsapp:") and observation.payload.get("timestamp") is not None:
                 timestamp = int(observation.payload["timestamp"])
@@ -141,6 +152,16 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
                 },
                 organism,
             )
+            output = (effect.output if effect else {}) or {}
+            provider = output.get("provider") if isinstance(output.get("provider"), dict) else {}
+            logger.info(
+                "observation processing completed event_ref=%s kind=%s effect=%s provider_http_status=%s provider_messages=%s",
+                event_ref,
+                observation.kind,
+                effect is not None,
+                output.get("provider_http_status"),
+                len(provider.get("messages") or []),
+            )
         except Exception as exc:
             organism.runtime.pending_intent = None
             organism.runtime.inbox.clear()
@@ -149,6 +170,13 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
             organism.runtime._seen_observations.discard(observation.observation_id)
             organism.runtime.phase = RuntimePhase.WAKE
             store.fail(observation.observation_id, f"{type(exc).__name__}: {exc}")
+            logger.exception(
+                "observation processing failed event_ref=%s kind=%s error_type=%s error=%s",
+                event_ref,
+                observation.kind,
+                type(exc).__name__,
+                exc,
+            )
 
     async def worker() -> None:
         while not stop.is_set():
@@ -183,6 +211,8 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
     @app.get("/healthz")
     async def healthz():
         lease = deadman.evaluate()
+        worker_task = getattr(app.state, "worker", None)
+        clock_task = getattr(app.state, "clock", None)
         return {
             "status": "ok" if lease.state is DeadmanState.ACTIVE else lease.state.value,
             "deadman": {
@@ -191,6 +221,10 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
             "identity": organism.identity,
             "memory_commits": len(organism.runtime.memory),
             "queue": store.queue_stats(),
+            "tasks": {
+                "worker": "running" if worker_task is not None and not worker_task.done() else "stopped",
+                "clock": "running" if clock_task is not None and not clock_task.done() else "stopped",
+            },
         }
 
     @app.get("/webhook")
@@ -216,7 +250,14 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
             observations = inbox.parse(raw, signature, settings.meta_app_secret)
             admitted = store.enqueue(observations)
         except (PermissionError, ValueError) as exc:
+            logger.warning("WhatsApp webhook rejected reason=%s", exc)
             return JSONResponse({"status": "rejected", "reason": str(exc)}, status_code=403)
+        logger.info(
+            "WhatsApp webhook parsed observations=%s admitted=%s duplicates=%s",
+            len(observations),
+            admitted,
+            len(observations) - admitted,
+        )
         return {"status": "queued", "admitted": admitted, "duplicates": len(observations) - admitted}
 
     return app

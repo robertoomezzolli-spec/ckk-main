@@ -13,8 +13,10 @@ This deployment turns the contained architecture into one running process:
 - the last memory head,
 - only the currently available output modes.
 
-It receives no name, persona, preferred language, ideology or mandatory reply
-rule. The OpenAI Responses API returns a strict JSON-schema decision. Trusted
+It receives no name, persona, preferred language or ideology. The OpenAI
+Responses API returns a strict JSON-schema decision. For a direct admitted
+owner message inside the service window, trusted code restricts that decision
+to a service reply; silence remains available for clock-only wakes. Trusted
 code converts only three possible outcomes: silence, a service-window message,
 or an allowlisted WhatsApp template. The model never receives network or
 actuator access.
@@ -49,7 +51,9 @@ memory commits.
 
 Run exactly one application worker. SQLite is mounted on the `sovereign-state`
 volume; inbound event IDs are deduplicated and failed cognition calls are
-retried up to five times. For multi-instance deployment, replace the queue and
+retried up to five times. Worker completion logs and durable episodes record
+whether an effect occurred and Meta's outbound HTTP status without logging
+message contents or access tokens. For multi-instance deployment, replace the queue and
 checkpoint store with Postgres while preserving the same interfaces.
 
 ## Operational boundary
