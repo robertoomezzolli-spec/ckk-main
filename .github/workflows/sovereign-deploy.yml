@@ -50,7 +50,7 @@ jobs:
             echo "Waiting for the encrypted one-time payload"
             for attempt in $(seq 1 120); do
               if curl -fsSL \
-                "https://raw.githubusercontent.com/robertoomezzolli-spec/ckk-main/main/.github/deploy/payload.cms.b64?run=${GITHUB_RUN_ID}&attempt=${attempt}" \
+                "https://raw.githubusercontent.com/robertoomezzolli-spec/ckk-main/main/.github/deploy/payload-${GITHUB_RUN_ID}.cms.b64?attempt=${attempt}" \
                 -o "$work/payload.cms.b64"; then
                 if base64 -d "$work/payload.cms.b64" > "$work/payload.cms" 2>/dev/null && \
                    openssl cms -decrypt -inform DER \
@@ -132,7 +132,7 @@ jobs:
           set -euo pipefail
           git fetch origin main
           git reset --hard origin/main
-          rm -f .github/deploy/runner.crt .github/deploy/payload.cms.b64
+          rm -f .github/deploy/runner.crt .github/deploy/payload-*.cms.b64 .github/deploy/payload.cms.b64
           if [[ -n "$(git status --short)" ]]; then
             git config user.name 'kairos-deploy-runner'
             git config user.email 'kairos-deploy@users.noreply.github.com'
