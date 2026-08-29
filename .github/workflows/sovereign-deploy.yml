@@ -110,7 +110,7 @@ jobs:
       - name: Verify HTTPS health
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 90); do
+          for attempt in $(seq 1 12); do
             if body=$(curl --fail --silent --show-error --max-time 10 https://kairos.206-189-55-212.sslip.io/healthz); then
               echo "KAIROS_HEALTH_OK $body"
               exit 0
@@ -118,6 +118,9 @@ jobs:
             sleep 2
           done
           echo "KAIROS health check failed"
+          ssh -i "$HOME/.ssh/sovereign-01" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            root@206.189.55.212 \
+            'cd /opt/sovereign && docker compose -f docker-compose.digitalocean.yml ps --all && docker compose -f docker-compose.digitalocean.yml logs --no-color --tail=120 caddy'
           exit 1
 
       - name: Remove one-time encrypted material
