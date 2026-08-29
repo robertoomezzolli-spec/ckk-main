@@ -100,7 +100,11 @@ jobs:
             chmod 600 .env.sovereign
             shred -u /tmp/kairos-openai-key 2>/dev/null || rm -f /tmp/kairos-openai-key
           fi
-          bash deploy/digitalocean/deploy.sh
+          if ! bash deploy/digitalocean/deploy.sh; then
+            docker compose -f docker-compose.digitalocean.yml ps --all || true
+            docker compose -f docker-compose.digitalocean.yml logs --no-color --tail=200 organism || true
+            exit 1
+          fi
           REMOTE
 
       - name: Verify HTTPS health
