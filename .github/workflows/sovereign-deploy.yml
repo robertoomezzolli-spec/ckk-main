@@ -9,6 +9,7 @@ on:
       - "control/deadman-public.pem"
       - "control/deadman-lease.json"
       - "deploy/digitalocean/Caddyfile"
+      - "deploy/digitalocean/deploy.sh"
 
 permissions:
   contents: write
