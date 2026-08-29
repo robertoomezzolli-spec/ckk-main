@@ -22,6 +22,10 @@
         reverse_proxy organism:8080
     }
 
+    handle /awareness* {
+        reverse_proxy observatory:8090
+    }
+
     handle {
         respond 404
     }

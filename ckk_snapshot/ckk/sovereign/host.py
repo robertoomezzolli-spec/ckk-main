@@ -18,6 +18,7 @@ from .deadman import DeadmanActuator, DeadmanGuard, DeadmanState
 from .organism import SovereignOrganism
 from .runtime import CapabilityPolicy, IngressPolicy, Observation, RuntimePhase, SovereignRuntime
 from .state import SQLiteStateStore
+from .telemetry import HttpTelemetrySink, NullTelemetrySink, TelemetrySink, sanitized_observation
 from .whatsapp import (
     SERVICE_WINDOW_SECONDS,
     WhatsAppCloudActuator,
@@ -76,6 +77,9 @@ class HostSettings:
     template_language_code: str = "en_US"
     clock_interval_seconds: int = 900
     deadman_control_dir: str = "/control"
+    observatory_ingest_url: str = ""
+    observatory_ingest_token: str = ""
+    subject_version: str = "unknown"
 
     @classmethod
     def from_env(cls) -> "HostSettings":
@@ -102,6 +106,9 @@ class HostSettings:
             template_language_code=os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en_US"),
             clock_interval_seconds=int(os.getenv("CLOCK_INTERVAL_SECONDS", "900")),
             deadman_control_dir=os.getenv("DEADMAN_CONTROL_DIR", "/control"),
+            observatory_ingest_url=os.getenv("OBSERVATORY_INGEST_URL", ""),
+            observatory_ingest_token=os.getenv("OBSERVATORY_INGEST_TOKEN", ""),
+            subject_version=os.getenv("SOVEREIGN_SUBJECT_VERSION", "unknown"),
         )
 
 
@@ -158,24 +165,58 @@ def build_organism(
     return organism, inbox
 
 
-def create_app(settings: HostSettings | None = None, client: Any = None, transport: Any = None):
+def create_app(
+    settings: HostSettings | None = None,
+    client: Any = None,
+    transport: Any = None,
+    telemetry: TelemetrySink | None = None,
+):
     settings = settings or HostSettings.from_env()
     os.makedirs(os.path.dirname(os.path.abspath(settings.state_path)), exist_ok=True)
     store = SQLiteStateStore(settings.state_path)
     store.retry_stale()
     deadman = DeadmanGuard.from_control_directory(settings.deadman_control_dir)
     organism, inbox = build_organism(settings, store, client, transport, deadman)
+    if telemetry is None and settings.observatory_ingest_url:
+        telemetry = HttpTelemetrySink(
+            settings.observatory_ingest_url,
+            settings.observatory_ingest_token,
+            settings.subject_version,
+            settings.openai_model,
+        )
+    telemetry = telemetry or NullTelemetrySink()
     app = FastAPI(title="Sovereign Fixpoint Organism", docs_url=None, redoc_url=None)
     stop = asyncio.Event()
 
     def process(observation: Observation) -> None:
         event_ref = _event_ref(observation.observation_id)
+        started = time.monotonic()
+        pre_identity = organism.identity
+        pre_memory_count = len(organism.runtime.memory)
+        pre_belief_count = len(organism.learner.beliefs)
+        ref_function = getattr(telemetry, "opaque_ref", lambda value: hashlib.sha256(value.encode()).hexdigest()[:24])
+        session_id = ref_function(observation.sensor) if observation.sensor.startswith("whatsapp:") else None
+        structural = sanitized_observation(observation, ref_function)
+        telemetry.emit(
+            "OBSERVED", structural, session_id=session_id,
+            memory_version=organism.runtime.memory[-1].commit_id if organism.runtime.memory else "genesis",
+            tool_state_version=hashlib.sha256("whatsapp.send".encode()).hexdigest(),
+        )
         logger.info("observation processing started event_ref=%s kind=%s", event_ref, observation.kind)
         try:
             if observation.sensor.startswith("whatsapp:") and observation.payload.get("timestamp") is not None:
                 timestamp = int(observation.payload["timestamp"])
                 inbox.record_message(observation.sensor.removeprefix("whatsapp:"), timestamp)
             organism.perceive(observation)
+            recent = store.recent_episodes(1000)
+            if observation.sensor.startswith("whatsapp:"):
+                recent = [item for item in recent if (item.get("observation") or {}).get("sensor") == observation.sensor]
+            telemetry.emit(
+                "RETRIEVED",
+                {"event_ref": structural["event_ref"], "episodic_count": min(len(recent), 24),
+                 "committed_belief_count": pre_belief_count, "content_exported": False},
+                session_id=session_id,
+            )
             effect = organism.think()
             commit = organism.sleep()
             store.complete(
@@ -190,6 +231,37 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
             )
             output = (effect.output if effect else {}) or {}
             provider = output.get("provider") if isinstance(output.get("provider"), dict) else {}
+            if effect is not None:
+                telemetry.emit(
+                    "ACTED",
+                    {"event_ref": structural["event_ref"], "capability": effect.capability,
+                     "success": effect.success, "simulated": effect.simulated,
+                     "provider_http_status": output.get("provider_http_status"),
+                     "provider_message_count": len(provider.get("messages") or [])},
+                    session_id=session_id, latency_ms=(time.monotonic() - started) * 1000,
+                )
+            else:
+                telemetry.emit(
+                    "ACTED", {"event_ref": structural["event_ref"], "capability": None,
+                              "success": True, "action_class": "silence"},
+                    session_id=session_id, latency_ms=(time.monotonic() - started) * 1000,
+                )
+            if len(organism.learner.beliefs) > pre_belief_count:
+                telemetry.emit(
+                    "LEARNED",
+                    {"event_ref": structural["event_ref"], "belief_delta": len(organism.learner.beliefs) - pre_belief_count,
+                     "belief_content_exported": False},
+                    session_id=session_id,
+                )
+            telemetry.emit(
+                "CONSOLIDATED",
+                {"event_ref": structural["event_ref"],
+                 "identity_chain_valid": commit.previous_identity == pre_identity and commit.identity == organism.identity,
+                 "audit_chain_valid": organism.runtime.audit.valid(),
+                 "memory_advanced": len(organism.runtime.memory) == pre_memory_count + 1,
+                 "checkpoint_persisted": True, "sleep_cycle": "NREM_REM_WAKE"},
+                session_id=session_id, memory_version=commit.runtime_commit,
+            )
             logger.info(
                 "observation processing completed event_ref=%s kind=%s effect=%s provider_http_status=%s provider_messages=%s",
                 event_ref,
@@ -206,6 +278,14 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
             organism.runtime._seen_observations.discard(observation.observation_id)
             organism.runtime.phase = RuntimePhase.WAKE
             store.fail(observation.observation_id, f"{type(exc).__name__}: {exc}")
+            capability = None
+            if organism.runtime.pending_intent is not None:
+                capability = organism.runtime.pending_intent.capability
+            telemetry.emit(
+                "FAILED", {"event_ref": structural["event_ref"], "error_type": type(exc).__name__,
+                           "capability": capability, "error_text_exported": False},
+                session_id=session_id, latency_ms=(time.monotonic() - started) * 1000,
+            )
             logger.exception(
                 "observation processing failed event_ref=%s kind=%s error_type=%s error=%s",
                 event_ref,
@@ -237,12 +317,24 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
     async def start() -> None:
         app.state.worker = asyncio.create_task(worker())
         app.state.clock = asyncio.create_task(clock())
+        lease = deadman.evaluate()
+        telemetry.emit(
+            "SELF_STATE_OBSERVED",
+            {"phase": organism.runtime.phase.value, "deadman_state": lease.state.value,
+             "memory_commits": len(organism.runtime.memory), "capabilities": sorted(organism.runtime.capabilities.allowed),
+             "sensor_classes": sorted({
+                 "whatsapp" if item.startswith("whatsapp:") else item for item in organism.runtime.ingress.sensors
+             }), "checkpoint_restored": bool(organism.identity_history)},
+            memory_version=organism.runtime.memory[-1].commit_id if organism.runtime.memory else "genesis",
+            tool_state_version=hashlib.sha256("whatsapp.send".encode()).hexdigest(),
+        )
 
     @app.on_event("shutdown")
     async def shutdown() -> None:
         stop.set()
         for task in (app.state.worker, app.state.clock):
             task.cancel()
+        telemetry.close()
 
     @app.get("/healthz")
     async def healthz():
@@ -310,6 +402,11 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
                 _event_ref(delivery_status.message_id),
                 delivery_status.status,
                 delivery_status.timestamp,
+            )
+            telemetry.emit(
+                "OUTBOUND_DELIVERY",
+                {"message_ref": _event_ref(delivery_status.message_id), "status": delivery_status.status,
+                 "provider_timestamp": delivery_status.timestamp},
             )
         return {"status": "queued", "admitted": admitted, "duplicates": len(observations) - admitted}
 

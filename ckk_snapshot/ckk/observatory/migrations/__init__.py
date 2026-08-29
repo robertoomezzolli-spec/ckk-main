@@ -1,0 +1,1 @@
+"""Versioned Observatory schema migrations."""

@@ -5,7 +5,9 @@ services:
       context: .
       dockerfile: Dockerfile.sovereign
     restart: unless-stopped
-    env_file: .env.sovereign
+    env_file:
+      - .env.sovereign
+      - .env.observatory-ingest
     expose:
       - "8080"
     volumes:
@@ -14,6 +16,29 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - internal
+
+  observatory:
+    image: ckk-observatory:local
+    build:
+      context: .
+      dockerfile: Dockerfile.observatory
+    restart: unless-stopped
+    env_file:
+      - .env.observatory
+      - .env.observatory-ingest
+    expose:
+      - "8090"
+    volumes:
+      - observatory-state:/observatory
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -58,6 +83,8 @@ services:
     depends_on:
       organism:
         condition: service_healthy
+      observatory:
+        condition: service_healthy
     env_file: .env.digitalocean
     ports:
       - "80:80"
@@ -78,6 +105,7 @@ services:
 
 volumes:
   sovereign-state:
+  observatory-state:
   caddy-data:
   caddy-config:
 
