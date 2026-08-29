@@ -11,7 +11,7 @@ import time
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from .brain import OpenAIResponsesCognition
 from .deadman import DeadmanActuator, DeadmanGuard, DeadmanState
@@ -29,6 +29,33 @@ from .whatsapp import (
 
 
 logger = logging.getLogger("uvicorn.error")
+
+
+PRIVACY_POLICY_HTML = """<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KAIROS Privacy Policy</title></head>
+<body style="max-width:760px;margin:3rem auto;padding:0 1rem;font:16px/1.55 system-ui,sans-serif">
+<h1>KAIROS Privacy Policy</h1>
+<p><strong>Last updated:</strong> 29 August 2026</p>
+<p>KAIROS is a WhatsApp-based assistant operated by Worldom.</p>
+<h2>Data processed</h2>
+<p>When you contact KAIROS, the service processes your WhatsApp identifier, message content,
+timestamps, media metadata, and message delivery status. Security and reliability logs contain
+request metadata but are not used for advertising.</p>
+<h2>Purpose and processors</h2>
+<p>Data is processed to authenticate incoming messages, generate and deliver replies, prevent
+abuse, and keep the service reliable. Meta/WhatsApp transports messages, OpenAI provides the
+language-model service, and DigitalOcean hosts the application and its operational data.</p>
+<h2>Retention and sharing</h2>
+<p>Operational data is retained only as long as needed to provide and secure the service or meet
+legal obligations. Worldom does not sell personal data. Data is shared only with the processors
+named above as required to operate KAIROS.</p>
+<h2 id="deletion">Access and deletion</h2>
+<p>You may request access to or deletion of your KAIROS data by emailing
+<a href="mailto:roberto.omezzolli@gmail.com">roberto.omezzolli@gmail.com</a>. Include the WhatsApp
+number used to contact KAIROS so the records can be located.</p>
+</body></html>"""
 
 
 def _event_ref(event_id: str) -> str:
@@ -227,6 +254,14 @@ def create_app(settings: HostSettings | None = None, client: Any = None, transpo
                 "clock": "running" if clock_task is not None and not clock_task.done() else "stopped",
             },
         }
+
+    @app.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
+    async def privacy_policy():
+        return HTMLResponse(PRIVACY_POLICY_HTML)
+
+    @app.get("/data-deletion", response_class=HTMLResponse, include_in_schema=False)
+    async def data_deletion():
+        return HTMLResponse(PRIVACY_POLICY_HTML)
 
     @app.get("/webhook")
     async def verify(request: Request):

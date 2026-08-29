@@ -40,6 +40,12 @@ class SovereignHostTests(unittest.TestCase):
                 app = create_app(settings=settings, client=object())
 
             with TestClient(app) as client:
+                privacy = client.get("/privacy")
+                self.assertEqual(privacy.status_code, 200)
+                self.assertIn("KAIROS Privacy Policy", privacy.text)
+                self.assertTrue(privacy.headers["content-type"].startswith("text/html"))
+                self.assertEqual(client.get("/data-deletion").status_code, 200)
+
                 accepted = client.get(
                     "/webhook",
                     params={
