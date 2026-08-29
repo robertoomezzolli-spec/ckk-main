@@ -167,7 +167,10 @@ corresponding `.example` files as the schema.
 
 The first sidecar startup writes an immutable `BASELINE_BOUNDARY` with
 `optimization_performed=false`. Existing production episodes may be imported
-only as structural, redacted observable evidence. Sandbox validation results
+only as structural, redacted observable evidence using
+`scripts/observatory-baseline-import.py`; the importer opens the Sovereign
+database read-only and never exports message bodies or sender identifiers.
+Sandbox validation results
 are stored under subject `observatory-sandbox`, never mixed into
 `KAIROS-production`. KAIROS is not tuned against Observatory results before a
 longitudinal baseline exists.

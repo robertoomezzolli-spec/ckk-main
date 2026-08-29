@@ -98,6 +98,20 @@ class ObservatoryStore:
         if event.confidence is not None and not 0 <= event.confidence <= 1:
             raise ValueError("confidence must be between zero and one")
         with self._lock, self._evidence:
+            existing = self._evidence.execute(
+                "SELECT * FROM evidence WHERE evidence_id=?", (evidence_id,)
+            ).fetchone()
+            if existing is not None:
+                comparable = {
+                    "event_type": event.event_type, "subject_id": event.subject_id,
+                    "subject_version": event.subject_version, "session_id": event.session_id,
+                    "metric": event.metric, "model_version": event.model_version,
+                    "memory_version": event.memory_version, "tool_state_version": event.tool_state_version,
+                    "payload_json": _canonical(payload),
+                }
+                if any(existing[key] != value for key, value in comparable.items()):
+                    raise ValueError("evidence ID reused with different observable content")
+                return evidence_id
             prior = self._evidence.execute(
                 "SELECT evidence_hash FROM evidence ORDER BY sequence DESC LIMIT 1"
             ).fetchone()

@@ -101,6 +101,23 @@ class AwarenessObservatoryTests(unittest.TestCase):
             self.assertEqual(restored.verify_chain(), (False, 1))
             restored.close()
 
+    def test_source_delivery_is_idempotent_but_conflicting_reuse_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = ObservatoryStore(directory)
+            event = EvidenceEvent(
+                evidence_id="source-stable", event_type="OBSERVED", subject_id="subject",
+                occurred_at=1.0, payload={"kind": "clock.tick"},
+            )
+            self.assertEqual(store.append(event), "source-stable")
+            self.assertEqual(store.append(event), "source-stable")
+            self.assertEqual(store.verify_chain(), (True, 1))
+            with self.assertRaisesRegex(ValueError, "different observable content"):
+                store.append(EvidenceEvent(
+                    evidence_id="source-stable", event_type="OBSERVED", subject_id="subject",
+                    occurred_at=1.0, payload={"kind": "different"},
+                ))
+            store.close()
+
     def test_every_probe_class_has_randomized_matched_control_and_intervention(self):
         with tempfile.TemporaryDirectory() as directory:
             store = ObservatoryStore(directory)
