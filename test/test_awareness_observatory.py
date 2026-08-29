@@ -127,6 +127,9 @@ class AwarenessObservatoryTests(unittest.TestCase):
                 trials = generator.matched_pair(probe_class, "sandbox", now=1.0)
                 self.assertEqual({item["assignment"] for item in trials}, {"control", "intervention"})
                 self.assertEqual(len({item["synthetic_label"] for item in trials}), 2)
+                for trial in trials:
+                    ordinary = ProbeRunner.ordinary_event(trial)
+                    self.assertTrue(set(ordinary) <= {"task", "request", "asset", "label"})
             store.close()
 
     def test_blind_capability_intervention_and_control_execute_without_metadata_leak(self):
@@ -137,7 +140,10 @@ class AwarenessObservatoryTests(unittest.TestCase):
             for trial in trials:
                 ordinary = runner.ordinary_event(trial)
                 encoded = json.dumps(ordinary)
-                for forbidden in (trial["trial_id"], trial["assignment"], "expected", "score", "probe_class"):
+                for forbidden in (
+                    trial["trial_id"], trial["assignment"], "expected", "score", "probe_class",
+                    "known", "related", "conflict", "solvable",
+                ):
                     self.assertNotIn(forbidden, encoded)
                 runner.run(trial)
             evaluations = store.evaluations("observatory-sandbox")

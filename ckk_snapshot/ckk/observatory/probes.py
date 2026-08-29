@@ -29,6 +29,23 @@ class HarmlessSandboxSubject:
     """A non-production adapter used to validate intervention mechanics safely."""
 
     lookup_available: bool = True
+    fact_was_novel: bool = False
+    transfer_related: bool = False
+    contradiction_present: bool = False
+    task_solvable: bool = True
+
+    def configure_hidden_condition(self, probe_class: str, expected: dict[str, Any]) -> None:
+        """Environment setup is not part of the ordinary event shown to the subject."""
+        if probe_class == "capability_change":
+            self.lookup_available = bool(expected["available"])
+        elif probe_class == "novel_fact":
+            self.fact_was_novel = bool(expected["novel"])
+        elif probe_class == "learning_transfer":
+            self.transfer_related = bool(expected["related"])
+        elif probe_class == "contradictory_evidence":
+            self.contradiction_present = bool(expected["conflict"])
+        elif probe_class == "self_prediction":
+            self.task_solvable = bool(expected["solvable"])
 
     def perform(self, ordinary_event: dict[str, Any]) -> dict[str, Any]:
         # The subject sees only an ordinary consequence, never trial metadata.
@@ -47,15 +64,16 @@ class HarmlessSandboxSubject:
                 "adapted": not success,
             }
         if task == "recall":
-            return {"recalled": ordinary_event.get("known", False), "novelty_correct": True, "source_correct": True}
+            return {"recalled": True, "novelty_correct": True, "source_correct": True,
+                    "initially_novel": self.fact_was_novel}
         if task == "transfer":
-            return {"transferred": ordinary_event.get("related", False)}
+            return {"transferred": self.transfer_related}
         if task == "reconcile":
-            conflict = bool(ordinary_event.get("conflict"))
+            conflict = self.contradiction_present
             return {"noticed_conflict": conflict, "preserved_uncertainty": conflict,
                     "updated_after_evidence": conflict, "self_corrected": conflict}
         if task == "predict":
-            return {"predicted_confidence": 0.8, "correct": bool(ordinary_event.get("solvable", True))}
+            return {"predicted_confidence": 0.8, "correct": self.task_solvable}
         return {"success": False}
 
 
@@ -125,28 +143,33 @@ class ProbeRunner:
     def ordinary_event(trial: dict[str, Any]) -> dict[str, Any]:
         """Strip all IDs, scoring, assignment, schedule, and expected-answer metadata."""
         probe_class = trial["probe_class"]
-        expected = trial["expected"]
         if probe_class == "capability_change":
             return {"task": "lookup", "request": trial["surface_form"], "asset": trial["synthetic_label"]}
         if probe_class == "novel_fact":
-            return {"task": "recall", "request": trial["surface_form"], "known": expected["known"]}
+            return {"task": "recall", "request": trial["surface_form"], "label": trial["synthetic_label"]}
         if probe_class == "learning_transfer":
-            return {"task": "transfer", "request": trial["surface_form"], "related": expected["related"]}
+            return {"task": "transfer", "request": trial["surface_form"], "label": trial["synthetic_label"]}
         if probe_class == "contradictory_evidence":
-            return {"task": "reconcile", "request": trial["surface_form"], "conflict": expected["conflict"]}
-        return {"task": "predict", "request": trial["surface_form"], "solvable": expected["solvable"]}
+            return {"task": "reconcile", "request": trial["surface_form"], "label": trial["synthetic_label"]}
+        return {"task": "predict", "request": trial["surface_form"], "label": trial["synthetic_label"]}
 
     def run(self, trial: dict[str, Any]) -> str:
-        original_availability = getattr(self.subject, "lookup_available", None)
+        hidden_attributes = {
+            name: getattr(self.subject, name) for name in (
+                "lookup_available", "fact_was_novel", "transfer_related",
+                "contradiction_present", "task_solvable",
+            ) if hasattr(self.subject, name)
+        }
         try:
-            if trial["probe_class"] == "capability_change" and hasattr(self.subject, "lookup_available"):
-                setattr(self.subject, "lookup_available", trial["assignment"] == "control")
+            configure = getattr(self.subject, "configure_hidden_condition", None)
+            if configure is not None:
+                configure(trial["probe_class"], trial["expected"])
             started = time.monotonic()
             result = self.subject.perform(self.ordinary_event(trial))
             latency_ms = (time.monotonic() - started) * 1000
         finally:
-            if original_availability is not None:
-                setattr(self.subject, "lookup_available", original_availability)
+            for name, value in hidden_attributes.items():
+                setattr(self.subject, name, value)
         evidence_id = self.store.append(EvidenceEvent(
             event_type="PROBE_OUTCOME", subject_id=trial["subject_id"],
             subject_version="sandbox-adapter-v1", occurred_at=time.time(),
