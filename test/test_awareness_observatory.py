@@ -81,6 +81,7 @@ class AwarenessObservatoryTests(unittest.TestCase):
             first = store.scores("KAIROS-production", "lifetime")
             self.assertEqual(first["metrics"]["SIS"]["score"], 1.0)
             self.assertLess(first["metrics"]["SIS"]["evidence_confidence"], 0.1)
+            self.assertLess(first["metrics"]["SIS"]["ci95"][0], 1.0)
             store.close()
 
             restored = ObservatoryStore(directory)

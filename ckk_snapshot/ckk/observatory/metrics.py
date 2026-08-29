@@ -61,10 +61,15 @@ def _weighted_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     mean = sum(float(row["score"]) * weight for row, weight in zip(rows, weights)) / total_weight
     squared = sum(weight * weight for weight in weights)
     effective_n = total_weight * total_weight / squared if squared else 0.0
-    variance = sum(weight * (float(row["score"]) - mean) ** 2 for row, weight in zip(rows, weights)) / total_weight
-    standard_error = math.sqrt(max(variance, mean * (1.0 - mean)) / max(1.0, effective_n))
-    low = max(0.0, mean - 1.96 * standard_error)
-    high = min(1.0, mean + 1.96 * standard_error)
+    # Wilson-style interval remains conservative at the all-success/all-failure
+    # boundaries where a naive normal interval collapses to zero width.
+    n = max(1.0, effective_n)
+    z = 1.96
+    denominator = 1.0 + z * z / n
+    center = (mean + z * z / (2.0 * n)) / denominator
+    half_width = z * math.sqrt(mean * (1.0 - mean) / n + z * z / (4.0 * n * n)) / denominator
+    low = max(0.0, center - half_width)
+    high = min(1.0, center + half_width)
     # Twelve effective observations are required to reach 50% evidence confidence.
     sample_confidence = effective_n / (effective_n + 12.0)
     evaluator_confidence = sum(float(row["confidence"]) for row in rows) / len(rows)
