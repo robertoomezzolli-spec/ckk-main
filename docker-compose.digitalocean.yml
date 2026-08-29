@@ -1,0 +1,82 @@
+services:
+  organism:
+    image: ckk-sovereign:local
+    build:
+      context: .
+      dockerfile: Dockerfile.sovereign
+    restart: unless-stopped
+    env_file: .env.sovereign
+    expose:
+      - "8080"
+    volumes:
+      - sovereign-state:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - internal
+
+  backup:
+    image: ckk-sovereign:local
+    restart: unless-stopped
+    depends_on:
+      organism:
+        condition: service_healthy
+    command:
+      - python
+      - -m
+      - ckk.sovereign.backup
+      - --database
+      - /data/sovereign.sqlite3
+      - --destination
+      - /data/backups
+      - --interval
+      - "21600"
+      - --retain
+      - "28"
+    volumes:
+      - sovereign-state:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    network_mode: none
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      organism:
+        condition: service_healthy
+    env_file: .env.digitalocean
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/digitalocean/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    networks:
+      - internal
+
+volumes:
+  sovereign-state:
+  caddy-data:
+  caddy-config:
+
+networks:
+  internal:

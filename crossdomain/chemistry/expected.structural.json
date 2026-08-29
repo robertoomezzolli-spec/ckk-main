@@ -1,0 +1,7 @@
+{
+  "domain": "chemistry",
+  "status": "MISSING_FROZEN_EXPECTED_OUTPUT",
+  "expected_structural_signatures": null,
+  "expected_derivation_events": null,
+  "reason": "No historical chemistry comparison database or frozen generated-output set was present."
+}

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#030711" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta name="description" content="Explore CKK's sealed structural graph as an evidence-aware universe." />
+  <title>CKK · The Universe of Structure</title>
+</head>
+<body>
+  <div id="loading" class="loading-screen" role="status">
+    <div class="loading-orbit"><i></i><i></i><i></i></div>
+    <p>VALIDATING SEALED SNAPSHOT</p>
+  </div>
+
+  <main id="app" class="app" hidden>
+    <canvas id="universe" aria-label="Interactive 3D structural universe"></canvas>
+    <section id="classic-fan" class="classic-fan" hidden aria-label="Classic CKK fan"></section>
+    <div id="fallback" class="fallback" hidden>
+      <h1>3D view unavailable</h1>
+      <p>Your browser did not provide WebGL2. The scientific snapshot is still available below.</p>
+      <div id="fallback-domains"></div>
+    </div>
+
+    <header class="topbar glass">
+      <button class="brand" data-action="home" aria-label="Universe overview">
+        <span class="brand-mark">CKK</span>
+        <span><b>UNIVERSE OF STRUCTURE</b><small>sealed scientific view</small></span>
+      </button>
+      <div class="snapshot-strip" data-testid="snapshot-strip">
+        <span><b>RUN 34</b><small>historical golden snapshot</small></span>
+        <span><b>276</b><small>structures</small></span>
+        <span><b>945</b><small>relations</small></span>
+        <span><b>196</b><small>legacy convergence nodes</small></span>
+        <span class="clean"><b>● CLEAN</b><small>snapshot integrity</small></span>
+      </div>
+      <div class="top-actions">
+        <a id="admin-view-link" class="admin-view-link" href="?view=classic" data-testid="admin-view-link">CLASSIC FAN</a>
+        <a href="/.netlify/functions/export-graph?format=json" download>Export JSON</a>
+        <a href="/.netlify/functions/export-graph?format=json.gz" download>Export gzip</a>
+        <button data-action="tour">GUIDED TOUR</button>
+        <button data-action="advanced" aria-pressed="false">ADVANCED DATA</button>
+        <a href="/science">SCIENTIFIC CONTROL PLANE</a>
+      </div>
+    </header>
+
+    <div id="admin-tools" class="admin-tools glass" hidden data-testid="admin-tools">
+      <a class="admin-logout-link" href="/admin-logout">LOG OUT</a>
+      <form id="seed-explorer" class="seed-explorer" data-testid="seed-explorer">
+        <label for="seed-expression">SEED EXPLORER</label>
+        <input id="seed-expression" name="expression" value="E = mc²" autocomplete="off" spellcheck="false" aria-label="Read-only seed expression">
+        <button type="submit">EXPLORE SEED</button>
+      </form>
+    </div>
+
+    <section id="seed-result" class="seed-result glass" hidden aria-live="polite" data-testid="seed-result"></section>
+    <div id="seed-cinematic" class="seed-cinematic" hidden aria-hidden="true"><span>EXPLORE SEED</span><strong></strong><i></i></div>
+
+    <nav class="domain-rail glass" aria-label="Domains" data-testid="domain-rail">
+      <button class="domain-button available active" data-domain="physics"><i></i><span>PHYSICS<small>276 structures</small></span></button>
+      <button class="domain-button partial" data-domain="chemistry"><i></i><span>CHEMISTRY<small>missing executable data</small></span></button>
+      <button class="domain-button partial" data-domain="biology"><i></i><span>BIOLOGY<small>missing executable data</small></span></button>
+      <button class="domain-button partial" data-domain="computation"><i></i><span>COMPUTATION<small>missing executable data</small></span></button>
+      <button class="domain-button bridge" data-domain="cross-domain"><i></i><span>CROSS-DOMAIN<small>0 certified bridges</small></span></button>
+    </nav>
+
+    <aside class="filters glass" aria-label="Truth filters">
+      <div class="panel-heading"><span>TRUTH MODES</span><button class="icon-button" data-action="toggle-filters" aria-label="Collapse filters">−</button></div>
+      <div class="filter-body">
+        <fieldset>
+          <legend>CATALOG STATUS</legend>
+          <label><input type="checkbox" value="KNOWN" checked><i class="known"></i>KNOWN <b id="count-known">15</b></label>
+          <label><input type="checkbox" value="REDISCOVERED" checked><i class="rediscovered"></i>REDISCOVERED <b id="count-rediscovered">2</b></label>
+          <label><input type="checkbox" value="VARIANT" checked><i class="variant"></i>VARIANT <b id="count-variant">129</b></label>
+          <label><input type="checkbox" value="UNMATCHED" checked><i class="unmatched"></i>UNMATCHED <b id="count-unmatched">130</b></label>
+        </fieldset>
+        <fieldset>
+          <legend>EVIDENCE</legend>
+          <div class="evidence-key"><span class="line proven"></span>PROVEN SNAPSHOT INTEGRITY</div>
+          <div class="evidence-key"><span class="line structural"></span>STRUCTURAL ONLY</div>
+          <div class="evidence-key"><span class="line provenance"></span>REQUIRES PROVENANCE</div>
+          <div class="evidence-key"><span class="line unknown"></span>NOT EVALUATED</div>
+        </fieldset>
+        <p class="truth-note">Catalog meaning is annotation. Generated structure, derivation, and interpretation remain separate.</p>
+      </div>
+    </aside>
+
+    <section id="domain-panel" class="domain-panel glass" aria-live="polite" hidden></section>
+    <section id="node-card" class="node-card glass" aria-live="polite" hidden data-testid="node-card"></section>
+    <section id="tour-card" class="tour-card glass" hidden data-testid="tour-card"></section>
+
+    <div class="view-mode glass">
+      <button class="active" data-view="universe">UNIVERSE</button>
+      <button data-view="questions">OPEN QUESTIONS</button>
+      <button data-view="bridges">CONNECTIONS</button>
+    </div>
+
+    <div class="flight-hud">
+      <div><kbd>DRAG</kbd> orbit <kbd>WASD</kbd> fly <kbd>Q/E</kbd> vertical <kbd>SCROLL</kbd> zoom</div>
+      <button data-action="reset-camera">RESET VIEW</button>
+    </div>
+
+    <div id="galaxy-labels" class="galaxy-labels" aria-hidden="true"></div>
+    <div id="toast" class="toast" role="status"></div>
+  </main>
+
+  <section id="landing" class="landing">
+    <div class="landing-stars"></div>
+    <div class="landing-content">
+      <p class="eyebrow">CKK · GENERATIVE STRUCTURE MAP</p>
+      <h1>THE UNIVERSE<br>OF <em>STRUCTURE</em></h1>
+      <p class="intro">A navigable scientific map of what the grammar generated, what the catalog recognizes, and what remains genuinely open.</p>
+      <div class="landing-actions">
+        <button class="primary" data-enter="explore">EXPLORE</button>
+        <button data-enter="tour">GUIDED TOUR</button>
+        <button data-enter="questions">OPEN QUESTIONS</button>
+        <button data-enter="bridges">CROSS-DOMAIN CONNECTIONS</button>
+      </div>
+      <div class="landing-safety"><span>● INTEGRITY CLEAN</span><span>SELF-DUALITY: NOT EVALUATED</span><span>MAXDIM 4: EXPERIMENT PARAMETER</span></div>
+    </div>
+  </section>
+
+  <template id="error-template">
+    <div class="fatal-error"><p>CKK could not validate the sealed snapshot.</p><pre></pre><button onclick="location.reload()">RETRY</button></div>
+  </template>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

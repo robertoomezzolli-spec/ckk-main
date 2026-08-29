@@ -1,0 +1,18 @@
+services:
+  organism:
+    build:
+      context: .
+      dockerfile: Dockerfile.sovereign
+    restart: unless-stopped
+    env_file: .env.sovereign
+    ports:
+      - "8080:8080"
+    volumes:
+      - sovereign-state:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  sovereign-state:

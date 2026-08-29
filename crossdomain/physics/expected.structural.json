@@ -1,0 +1,7 @@
+{
+  "domain": "physics",
+  "status": "MISSING_FROZEN_EXPECTED_OUTPUT",
+  "expected_structural_signatures": null,
+  "expected_derivation_events": null,
+  "reason": "No reviewed output baseline was frozen with the executable seed fixture. Run 34 is a conservative historical projection and is not interchangeable with current structural_sig output."
+}

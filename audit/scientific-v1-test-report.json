@@ -1,0 +1,11 @@
+{
+  "schema": "ckk.scientific-v1-test-report.v1",
+  "node_tests": {"passed": 52, "failed": 0},
+  "python_tests": {"passed": 22, "failed": 0},
+  "browser_tests": {"passed": 8, "failed": 0},
+  "build": "PASS",
+  "production_dependency_vulnerabilities": 0,
+  "real_external_agent_cycle": "BLOCKED_EXTERNAL_APPROVAL",
+  "contract_replay_is_scientific_evidence": false
+}
+

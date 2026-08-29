@@ -1,0 +1,165 @@
+{
+  "schema": "ckk.crossdomain-regression.v1",
+  "audited_at": "2026-08-29T00:15:45.164788+00:00",
+  "mode": "READ_ONLY",
+  "starting_commit": "5128409001c77306a8b1cb04583cbc79203e5978",
+  "golden_gate": "FAIL",
+  "core_invariants": {
+    "selfdual_operator_absent": {
+      "status": "PASS",
+      "observed": false,
+      "required": false
+    },
+    "dual_structural_roundtrip": {
+      "status": "PASS",
+      "selfduality": "NOT_EVALUATED"
+    },
+    "fiber_order_compatibility": {
+      "status": "PASS",
+      "input_orders": [
+        0,
+        2
+      ],
+      "observed_output": null,
+      "failure": null
+    },
+    "product_dual_factor_preservation": {
+      "status": "PASS",
+      "input_dual_states": [
+        0,
+        1
+      ],
+      "observed_output": null,
+      "failure": null
+    },
+    "fiber_dual_factor_preservation": {
+      "status": "PASS",
+      "input_dual_states": [
+        0,
+        1
+      ],
+      "observed_output": null,
+      "failure": null
+    },
+    "maxdim_disclosed": {
+      "status": "PASS",
+      "value": 4,
+      "role": "EXPERIMENT_PARAMETER",
+      "forbidden_inference": "4D spacetime discovered"
+    }
+  },
+  "domains": {
+    "physics": {
+      "archive_status": "FOUND_EXACT",
+      "regression": "BLOCKED_MISSING_GOLDEN_BASELINE",
+      "seed_fixture_matches_current_core": true,
+      "blocking_reasons": [
+        "FROZEN_EXPECTED_OUTPUT",
+        "INDEPENDENT_HOLDOUT_FIXTURE"
+      ],
+      "current_core_diagnostic": {
+        "structural_states": 588,
+        "derivation_events_raw": 2073,
+        "derivation_events_unique": 1495,
+        "true_derivational_confluences": 441,
+        "confluence_definition": ">=2 distinct DerivationEvent.event_key values produce one structural_sig",
+        "structural_signature_sha256": "d783185570ac47907e4484e8c445240a427ab89c67952daf6c3c5789d5b064ca",
+        "kind_counts": {
+          "BOUNDARY": 56,
+          "BUNDLE": 140,
+          "CARRIER": 2,
+          "CYCLE": 72,
+          "FILTER": 28,
+          "INTEGER": 90,
+          "PRODUCT": 104,
+          "RECURRENCE": 4,
+          "SYMMETRY": 4,
+          "WEIGHT": 88
+        },
+        "dimension_counts": {
+          "0": 48,
+          "1": 288,
+          "2": 160,
+          "3": 48,
+          "4": 44
+        },
+        "dual_counts": {
+          "0": 431,
+          "1": 157
+        },
+        "operator_event_counts": {
+          "op_boundary": 76,
+          "op_close": 16,
+          "op_degenerate": 288,
+          "op_dual": 229,
+          "op_exclude": 288,
+          "op_fiber": 336,
+          "op_fill": 40,
+          "op_filter": 32,
+          "op_product": 448,
+          "op_weight": 160,
+          "op_winding": 160
+        },
+        "cross_order_fiber_events": 0,
+        "mixed_dual_product_events": 0,
+        "mixed_dual_fiber_events": 0,
+        "self_transition_events": 0,
+        "known_matches": "NOT_EVALUATED_NO_INDEPENDENT_CURRENT_CORE_CATALOG",
+        "rediscovered_matches": "NOT_EVALUATED_NO_INDEPENDENT_CURRENT_CORE_HOLDOUT",
+        "variants": "NOT_EVALUATED_NO_FROZEN_MATCHER_BASELINE",
+        "unmatched": "NOT_EVALUATED_NO_FROZEN_MATCHER_BASELINE",
+        "lost_vs_historical": "NOT_COMPARABLE_EXACTLY",
+        "new_vs_historical": "NOT_COMPARABLE_EXACTLY",
+        "changed_structural_signatures": "NOT_COMPARABLE_EXACTLY"
+      }
+    },
+    "chemistry": {
+      "archive_status": "FOUND_PARTIAL",
+      "regression": "BLOCKED_PARTIAL_HISTORICAL_ARTIFACT",
+      "blocking_reasons": [
+        "EXECUTABLE_SEED_FIXTURE",
+        "FROZEN_EXPECTED_OUTPUT",
+        "INDEPENDENT_HOLDOUT_FIXTURE"
+      ],
+      "current_core_diagnostic": "NOT_RUN_WITHOUT_EXECUTABLE_SEEDS"
+    },
+    "biology": {
+      "archive_status": "FOUND_PARTIAL",
+      "regression": "BLOCKED_PARTIAL_HISTORICAL_ARTIFACT",
+      "blocking_reasons": [
+        "EXECUTABLE_SEED_FIXTURE",
+        "FROZEN_EXPECTED_OUTPUT",
+        "INDEPENDENT_HOLDOUT_FIXTURE"
+      ],
+      "current_core_diagnostic": "NOT_RUN_WITHOUT_EXECUTABLE_SEEDS"
+    },
+    "computation": {
+      "archive_status": "FOUND_PARTIAL",
+      "regression": "BLOCKED_PARTIAL_HISTORICAL_ARTIFACT",
+      "blocking_reasons": [
+        "EXECUTABLE_SEED_FIXTURE",
+        "FROZEN_EXPECTED_OUTPUT",
+        "INDEPENDENT_HOLDOUT_FIXTURE"
+      ],
+      "current_core_diagnostic": "NOT_RUN_WITHOUT_EXECUTABLE_SEEDS"
+    }
+  },
+  "new_generation": {
+    "eligible": false,
+    "created": false,
+    "reason": "Physics Golden Regression is not green; autonomous generation is forbidden by the sealed protocol."
+  },
+  "run34": {
+    "generation_id": "v6-noselfdual-563f50e328c5",
+    "run_id": 34,
+    "role": "SEALED_HISTORICAL_PRESENTATION_SNAPSHOT",
+    "unchanged": true,
+    "not_a_current_core_expected_output": true,
+    "counts": {
+      "nodes": 276,
+      "edges": 945,
+      "historical_graph_confluences": 196
+    },
+    "selfduality": "NOT_EVALUATED"
+  }
+}

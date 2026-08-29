@@ -1,0 +1,19 @@
+{
+  "domain": "physics",
+  "fixture_version": 1,
+  "status": "FOUND_EXACT",
+  "executable": true,
+  "source": "ckk_snapshot/ckk/gen/grammar.py built-in SEEDS at 5128409001c77306a8b1cb04583cbc79203e5978",
+  "seeds": [
+    {"kind":"RECURRENCE","dim":0,"order":0,"label":"x~x+1","mult":1},
+    {"kind":"RECURRENCE","dim":0,"order":2,"label":"x~x+2","mult":1},
+    {"kind":"RECURRENCE","dim":0,"order":3,"label":"x~x+3","mult":1},
+    {"kind":"RECURRENCE","dim":0,"order":4,"label":"x~x+4","mult":1},
+    {"kind":"SYMMETRY","dim":0,"order":0,"label":"S+u","mult":1,"sq":1,"anti":false},
+    {"kind":"SYMMETRY","dim":0,"order":0,"label":"S-u","mult":1,"sq":-1,"anti":false},
+    {"kind":"SYMMETRY","dim":0,"order":0,"label":"S+a","mult":1,"sq":1,"anti":true},
+    {"kind":"SYMMETRY","dim":0,"order":0,"label":"S-a","mult":1,"sq":-1,"anti":true},
+    {"kind":"CARRIER","dim":0,"order":0,"label":"excl","mult":1,"occ":1},
+    {"kind":"CARRIER","dim":0,"order":0,"label":"free","mult":1,"occ":-1}
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "domain": "physics",
+  "archive_status": "FOUND_EXACT",
+  "seed_provenance": "current audited core built-in SEEDS",
+  "maxdim": {"value": 4, "role": "EXPERIMENT_PARAMETER", "not_a_claim": "4D spacetime discovery"},
+  "duality": {"structural_roundtrip": "TEST_REQUIRED", "selfduality": "NOT_EVALUATED"},
+  "certifiable": false,
+  "blocking_reasons": ["MISSING_FROZEN_EXPECTED_OUTPUT", "MISSING_INDEPENDENT_HOLDOUT_FIXTURE"]
+}

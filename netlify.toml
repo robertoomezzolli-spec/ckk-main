@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+[[redirects]]
+  from = "/api/science/*"
+  to = "/.netlify/functions/science-api/:splat"
+  status = 307
+[[redirects]]
+  from = "/api/public/*"
+  to = "/.netlify/functions/public-api/:splat"
+  status = 307
+[[redirects]]
+  from = "/science/*"
+  to = "/science/index.html"
+  status = 200
+[[edge_functions]]
+  function = "gate"
+  path = "/*"
+[functions]
+  node_bundler = "esbuild"

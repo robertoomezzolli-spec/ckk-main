@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>CKK Scientific Control Plane</title>
+  <link rel="icon" href="/favicon.svg">
+</head>
+<body>
+  <div id="science-app">
+    <aside class="science-nav">
+      <a class="science-brand" href="/science" aria-label="CKK Scientific home">
+        <span class="science-mark">CKK</span><span>SCIENTIFIC <b>v1</b></span>
+      </a>
+      <nav aria-label="Scientific views">
+        <a href="/science" data-route="overview"><i>01</i>Overview</a>
+        <a href="/science/queue" data-route="queue"><i>02</i>Candidate Queue</a>
+        <a href="/science/disputes" data-route="disputes"><i>03</i>Disputes</a>
+        <a href="/science/failures" data-route="failures"><i>04</i>Failures</a>
+        <a href="/science/grammar-pressure" data-route="grammar-pressure"><i>05</i>Grammar Pressure</a>
+        <a href="/science/generations" data-route="generations"><i>06</i>Generations</a>
+        <a href="/science/cross-domain" data-route="cross-domain"><i>07</i>Cross-Domain</a>
+      </nav>
+      <div class="nav-law"><span>ARCHITECTURE LAW</span><b>STRUCTURE</b><em>≠</em><b>DERIVATION</b><em>≠</em><b>INTERPRETATION</b></div>
+      <a class="universe-link" href="/">← Public Universe</a>
+    </aside>
+    <main>
+      <header class="science-header">
+        <div><span class="eyebrow">AUTONOMOUS SCIENCE · PREVIEW</span><h1 id="view-title">Overview</h1></div>
+        <div class="header-state"><span class="pulse"></span><b id="connection-label">CONNECTING</b><small>SEALED DATA BOUNDARY</small></div>
+      </header>
+      <section id="science-view" aria-live="polite"><div class="loading-grid"><i></i><i></i><i></i><p>Loading immutable scientific state…</p></div></section>
+    </main>
+  </div>
+  <dialog id="inspector" data-testid="structure-inspector"><button class="dialog-close" aria-label="Close inspector">×</button><div id="inspector-content"></div></dialog>
+  <script type="module" src="/src/science-main.js"></script>
+</body>
+</html>
+

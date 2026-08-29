@@ -1,0 +1,8 @@
+{
+  "domain": "biology",
+  "archive_status": "FOUND_PARTIAL",
+  "provenance_document": "provenance/SEALED_ZN.md",
+  "provenance_sha256": "af7f0edc5c67a70d30bc59a668bafe8aed8ce52361854aaf9055b85e512789df",
+  "certifiable": false,
+  "forbidden_claim": "A biological match from the narrative record alone"
+}

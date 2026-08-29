@@ -1,0 +1,80 @@
+{
+  "suite_version": 2,
+  "starting_commit": "5128409001c77306a8b1cb04583cbc79203e5978",
+  "hashes": {
+    "status": "PASS",
+    "checked": 20,
+    "failures": []
+  },
+  "domains": {
+    "physics": {
+      "archive_status": "FOUND_EXACT",
+      "executable_seed_fixture": true,
+      "seed_count": 10,
+      "expected_structural_frozen": false,
+      "expected_derivations_frozen": false,
+      "holdouts_frozen": false,
+      "gate": "BLOCKED",
+      "blocking_reasons": [
+        "FROZEN_EXPECTED_OUTPUT",
+        "INDEPENDENT_HOLDOUT_FIXTURE"
+      ]
+    },
+    "chemistry": {
+      "archive_status": "FOUND_PARTIAL",
+      "executable_seed_fixture": false,
+      "seed_count": 0,
+      "expected_structural_frozen": false,
+      "expected_derivations_frozen": false,
+      "holdouts_frozen": false,
+      "gate": "BLOCKED",
+      "blocking_reasons": [
+        "EXECUTABLE_SEED_FIXTURE",
+        "FROZEN_EXPECTED_OUTPUT",
+        "INDEPENDENT_HOLDOUT_FIXTURE"
+      ]
+    },
+    "biology": {
+      "archive_status": "FOUND_PARTIAL",
+      "executable_seed_fixture": false,
+      "seed_count": 0,
+      "expected_structural_frozen": false,
+      "expected_derivations_frozen": false,
+      "holdouts_frozen": false,
+      "gate": "BLOCKED",
+      "blocking_reasons": [
+        "EXECUTABLE_SEED_FIXTURE",
+        "FROZEN_EXPECTED_OUTPUT",
+        "INDEPENDENT_HOLDOUT_FIXTURE"
+      ]
+    },
+    "computation": {
+      "archive_status": "FOUND_PARTIAL",
+      "executable_seed_fixture": false,
+      "seed_count": 0,
+      "expected_structural_frozen": false,
+      "expected_derivations_frozen": false,
+      "holdouts_frozen": false,
+      "gate": "BLOCKED",
+      "blocking_reasons": [
+        "EXECUTABLE_SEED_FIXTURE",
+        "FROZEN_EXPECTED_OUTPUT",
+        "INDEPENDENT_HOLDOUT_FIXTURE"
+      ]
+    }
+  },
+  "result": "FAIL",
+  "failures": [
+    "physics: missing FROZEN_EXPECTED_OUTPUT",
+    "physics: missing INDEPENDENT_HOLDOUT_FIXTURE",
+    "chemistry: missing EXECUTABLE_SEED_FIXTURE",
+    "chemistry: missing FROZEN_EXPECTED_OUTPUT",
+    "chemistry: missing INDEPENDENT_HOLDOUT_FIXTURE",
+    "biology: missing EXECUTABLE_SEED_FIXTURE",
+    "biology: missing FROZEN_EXPECTED_OUTPUT",
+    "biology: missing INDEPENDENT_HOLDOUT_FIXTURE",
+    "computation: missing EXECUTABLE_SEED_FIXTURE",
+    "computation: missing FROZEN_EXPECTED_OUTPUT",
+    "computation: missing INDEPENDENT_HOLDOUT_FIXTURE"
+  ]
+}

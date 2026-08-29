@@ -1,0 +1,28 @@
+services:
+  agency-lab:
+    build:
+      context: .
+      dockerfile: Dockerfile.sovereign
+    env_file: .env.agency-lab
+    command:
+      - python
+      - -m
+      - ckk.agency_lab.cli
+      - --brain
+      - openai
+      - --runs
+      - "3"
+      - --output
+      - /lab-results/agency-lab.json
+    volumes:
+      - agency-lab-results:/lab-results
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  agency-lab-results:

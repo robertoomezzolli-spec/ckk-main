@@ -1,0 +1,9 @@
+{
+  "domain": "biology",
+  "fixture_version": 1,
+  "status": "FOUND_PARTIAL",
+  "executable": false,
+  "seeds": null,
+  "historical_test": {"missing_distinction": "FINITE_RECURRENCE_ORDER", "candidate_signature": "x~x+n -> Z_n"},
+  "reason": "The sealed record contains a domain-neutral missing distinction, but no executable biological seed list."
+}

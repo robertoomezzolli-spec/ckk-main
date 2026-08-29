@@ -1,0 +1,21 @@
+{
+    email {$ACME_EMAIL}
+    admin off
+}
+
+{$AGENT_DOMAIN} {
+    encode zstd gzip
+
+    @webhook path /webhook
+    reverse_proxy @webhook organism:8080
+
+    @health path /healthz
+    reverse_proxy @health organism:8080
+
+    respond 404
+
+    log {
+        output stdout
+        format json
+    }
+}

@@ -1,0 +1,37 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - fail2ban
+  - git
+  - ufw
+  - unattended-upgrades
+
+runcmd:
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - /bin/bash -c '. /etc/os-release && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list'
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - systemctl enable --now docker fail2ban unattended-upgrades
+  - useradd --create-home --shell /bin/bash deploy || true
+  - usermod -aG docker deploy
+  - install -d -m 0700 -o deploy -g deploy /home/deploy/.ssh
+  - /bin/bash -c 'test ! -f /root/.ssh/authorized_keys || cp /root/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys'
+  - chown deploy:deploy /home/deploy/.ssh/authorized_keys || true
+  - chmod 0600 /home/deploy/.ssh/authorized_keys || true
+  - mkdir -p /opt/sovereign
+  - chown deploy:deploy /opt/sovereign
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow OpenSSH
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+  - /bin/bash -c 'printf "PasswordAuthentication no\nPermitRootLogin prohibit-password\n" > /etc/ssh/sshd_config.d/99-sovereign.conf'
+  - systemctl restart ssh
+
+final_message: "Sovereign DigitalOcean host is ready. Deploy into /opt/sovereign as user deploy."

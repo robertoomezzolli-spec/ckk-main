@@ -1,0 +1,36 @@
+{
+  "schema": "ckk.crossdomain-deployment.v1",
+  "preview": {
+    "deploy_id": "6a905f10a673aaf0aff7b16e",
+    "url": "https://6a905f10a673aaf0aff7b16e--ckk-live.netlify.app",
+    "state": "ready",
+    "context": "deploy-preview",
+    "published_at": null,
+    "basic_auth": "EXISTING_SITE_GATE",
+    "anonymous_http_result": 401
+  },
+  "production": {
+    "changed": false,
+    "deploy_id_before": "6a905439bb00070008bc7a9d",
+    "deploy_id_after": "6a905439bb00070008bc7a9d",
+    "commit": "5128409001c77306a8b1cb04583cbc79203e5978",
+    "context": "production"
+  },
+  "database": {
+    "production_changed": false,
+    "production_branch": "br-wild-hill-awswgush",
+    "backup_branch": "br-mute-smoke-aw43dft1",
+    "after_verification": {
+      "generation_id": "v6-noselfdual-563f50e328c5",
+      "grammar_version": "v6-html-no-asserted-selfdual",
+      "run_id": 34,
+      "nodes": 276,
+      "edges": 945,
+      "historical_graph_confluences": 196,
+      "clean": true,
+      "selfduality": "NOT_EVALUATED"
+    }
+  },
+  "run34_changed": false,
+  "new_generation_created": false
+}

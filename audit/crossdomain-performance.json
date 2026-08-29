@@ -1,0 +1,89 @@
+{
+  "measured_at": "2026-08-27T17:24:13.713Z",
+  "app_ready_ms_from_navigation": 107,
+  "frames_sampled": 120,
+  "mean_frame_ms": 22.778333333283665,
+  "p95_frame_ms": 25.899999999999636,
+  "mean_fps": 43.901368259406475,
+  "encoded_resource_bytes": 183963,
+  "resource_count": 5,
+  "webgl2": true,
+  "app_state": {
+    "generationId": "v6-noselfdual-563f50e328c5",
+    "runId": "34",
+    "nodes": 276,
+    "edges": 945,
+    "domains": {
+      "physics": {
+        "name": "PHYSICS",
+        "status": "FOUND_EXACT",
+        "executable": true,
+        "structures": 276,
+        "center": [
+          0,
+          0,
+          0
+        ],
+        "color": 6478335,
+        "note": "The sealed Run 34 graph is available as a complete, validated historical presentation snapshot."
+      },
+      "chemistry": {
+        "name": "CHEMISTRY",
+        "status": "FOUND_PARTIAL",
+        "executable": false,
+        "structures": 0,
+        "center": [
+          290,
+          75,
+          -90
+        ],
+        "color": 12680703,
+        "note": "A sealed exclusion/occupancy methodology survives, but no executable seed list, output fixture, or hold-out catalog was recovered.",
+        "provenance": "SEALED_EXCLUSION.md",
+        "missing": "EXECUTABLE SEEDS + FROZEN OUTPUT + HOLD-OUTS"
+      },
+      "biology": {
+        "name": "BIOLOGY",
+        "status": "FOUND_PARTIAL",
+        "executable": false,
+        "structures": 0,
+        "center": [
+          -275,
+          90,
+          -130
+        ],
+        "color": 6678189,
+        "note": "A sealed finite-recurrence methodology survives, but no executable biological seed list or frozen result set was recovered.",
+        "provenance": "SEALED_ZN.md",
+        "missing": "EXECUTABLE SEEDS + FROZEN OUTPUT + HOLD-OUTS"
+      },
+      "computation": {
+        "name": "COMPUTATION",
+        "status": "FOUND_PARTIAL",
+        "executable": false,
+        "structures": 0,
+        "center": [
+          60,
+          -205,
+          -210
+        ],
+        "color": 16743594,
+        "note": "A sealed structural-involution methodology survives, but no executable computation fixture was recovered. Self-duality remains not evaluated.",
+        "provenance": "SEALED_DUALITY.md",
+        "missing": "EXECUTABLE SEEDS + FROZEN OUTPUT + HOLD-OUTS"
+      }
+    },
+    "crossDomainBridges": 0
+  },
+  "rendering": {
+    "node_primitive": "THREE.InstancedMesh",
+    "nodes": 276,
+    "relation_segments": 1890
+  },
+  "browser": "chromium",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "environment": "Headless Google Chrome with SwiftShader WebGL; conservative CI smoke measurement, not a hardware benchmark."
+}

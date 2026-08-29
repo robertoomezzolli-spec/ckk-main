@@ -1,0 +1,20 @@
+name: CKK live cycle
+on:
+  workflow_dispatch:
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r agent/requirements.txt
+      - run: python agent/export_graph.py
+        env: { DATABASE_URL: '${{ secrets.DATABASE_URL }}' }
+      - run: python agent/build_queue.py
+        env: { DATABASE_URL: '${{ secrets.DATABASE_URL }}' }
+      - run: python agent/research_agent.py
+        env:
+          DATABASE_URL: '${{ secrets.DATABASE_URL }}'
+          OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY }}'
+          OPENAI_MODEL: '${{ vars.OPENAI_MODEL }}'

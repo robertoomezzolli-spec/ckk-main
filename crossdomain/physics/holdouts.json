@@ -1,0 +1,6 @@
+{
+  "domain": "physics",
+  "status": "MISSING_INDEPENDENT_HOLDOUT_FIXTURE",
+  "holdouts": null,
+  "reason": "The Run 34 interpretation catalog is presentation data, not a frozen independent hold-out fixture for the current core."
+}

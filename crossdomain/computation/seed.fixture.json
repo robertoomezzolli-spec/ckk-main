@@ -1,0 +1,9 @@
+{
+  "domain": "computation",
+  "fixture_version": 1,
+  "status": "FOUND_PARTIAL",
+  "executable": false,
+  "seeds": null,
+  "historical_test": {"missing_distinction": "STRUCTURAL_INVOLUTION", "candidate_signature": "D:X->X*; D(D(X))=X", "selfduality": "NOT_EVALUATED"},
+  "reason": "The sealed record contains interpretations and a domain-neutral missing operator test, but no executable computation seed list."
+}

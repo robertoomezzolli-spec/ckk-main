@@ -1,0 +1,9 @@
+{
+  "domain": "computation",
+  "archive_status": "FOUND_PARTIAL",
+  "provenance_document": "provenance/SEALED_DUALITY.md",
+  "provenance_sha256": "92ef55a8d80d6e0fd1c5c650eeee0cefc5b0735a006f3f39c59e9cad5e300849",
+  "certifiable": false,
+  "selfduality": "NOT_EVALUATED",
+  "forbidden_claim": "A computation-domain match or self-duality result from the narrative record alone"
+}

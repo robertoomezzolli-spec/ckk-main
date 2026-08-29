@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#02050d"/>
+  <circle cx="32" cy="32" r="20" fill="none" stroke="#62d9ff"/>
+  <text x="32" y="37" fill="#62d9ff" text-anchor="middle" font-size="14">CKK</text>
+</svg>

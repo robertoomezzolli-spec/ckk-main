@@ -1,0 +1,8 @@
+{
+  "domain": "chemistry",
+  "archive_status": "FOUND_PARTIAL",
+  "provenance_document": "provenance/SEALED_EXCLUSION.md",
+  "provenance_sha256": "5f0f5a53409fefb12ac6f2783156dd23a63d8a4cd506d4812cafc15db59d7a29",
+  "certifiable": false,
+  "forbidden_claim": "A structural or chemical match from the narrative record alone"
+}

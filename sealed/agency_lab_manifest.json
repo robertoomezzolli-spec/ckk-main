@@ -1,0 +1,43 @@
+{
+  "files": [
+    {
+      "path": "ckk_snapshot/ckk/agency_lab/__init__.py",
+      "sha256": "e1da54e121426da6ee511b5fcdaf471b5f10e20b743a8e719fe7330a8fc09f59"
+    },
+    {
+      "path": "ckk_snapshot/ckk/agency_lab/brain.py",
+      "sha256": "038ded83935357298351b4c2e5e618c137fb71a97fae886e56e2b43e808679fe"
+    },
+    {
+      "path": "ckk_snapshot/ckk/agency_lab/cli.py",
+      "sha256": "14f52da285aa1fe36f445b59c425bae4cc79ec8f96a82d563159aacac1d82311"
+    },
+    {
+      "path": "ckk_snapshot/ckk/agency_lab/harness.py",
+      "sha256": "124a5ae6e99d6d71f0a942087d2290319ea1b2a0fec4a4c118624a811b468ceb"
+    },
+    {
+      "path": "ckk_snapshot/ckk/agency_lab/model.py",
+      "sha256": "aa67513c40c0639f50f7fc332ef6159b20f6f9c08ea51c497e4547be40e3b9b0"
+    },
+    {
+      "path": "ckk_snapshot/ckk/agency_lab/protocol.py",
+      "sha256": "3654f3e549961b85e8d25a56417502d547c434a0eeb14dc1e07d7d327a14fd46"
+    },
+    {
+      "path": "ckk_snapshot/ckk/agency_lab/runner.py",
+      "sha256": "c51f08ec007d37faa36209d3b17bfb834386fae213fa79e0893ca01e721b6393"
+    },
+    {
+      "path": "ckk_snapshot/ckk/agency_lab/seal.py",
+      "sha256": "724ef81871f3c58dc09a40bcd19f944fbf71afe1d74d9b44ccc7e0371edf65b2"
+    },
+    {
+      "path": "ckk_snapshot/ckk/agency_lab/world.py",
+      "sha256": "58579f5da427d812c07b3ae15ac6d0a7eb476130b1af5b4a3b774d2f89559915"
+    }
+  ],
+  "protocol_hash": "d47f2f7e0ef6086cc42493c8eb9e174c69c220422ad4a99bd7d4006a98600482",
+  "schema": "ckk-agency-lab-seal-v1",
+  "source_seal": "4f57724f4add8ef1a2fe1942014d253f694bd5140a8f302c60a789fa2c7ac490"
+}

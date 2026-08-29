@@ -1,0 +1,27 @@
+{
+  "algorithm": "sha256",
+  "sealed_at": "2026-08-27T17:22:19+02:00",
+  "starting_commit": "5128409001c77306a8b1cb04583cbc79203e5978",
+  "files": {
+    "biology/expected.structural.json": "c9834a96db4984cd539c87fdba8333535b8e936919f82f9c6dde60ada8760e66",
+    "biology/holdouts.json": "f07dcc6117580ba1f8c3c2e05aa602bbd87552901c8e21a6d39f0342947d52bc",
+    "biology/metadata.json": "4c0d1481deb8641dc49c63a216bb55ac0b814f413f705ff5f09503548276b049",
+    "biology/provenance/SEALED_ZN.md": "af7f0edc5c67a70d30bc59a668bafe8aed8ce52361854aaf9055b85e512789df",
+    "biology/seed.fixture.json": "d8263e027d5ff6cbd3e6c71c85801060915919642efb11401567d16f88e9b965",
+    "chemistry/expected.structural.json": "81769529842db5ee6acfd22c9834b1b1e6ed0efaefc025f9279182b01c6e92fc",
+    "chemistry/holdouts.json": "9e9a264c334ad618665d8a99e68d4642a603389538d40b7e5729fd18673fdea6",
+    "chemistry/metadata.json": "0144d81215f8b1f646ae804f1de2cd0d37c0d1adfd4bf58fd3da3cd99942ce16",
+    "chemistry/provenance/SEALED_EXCLUSION.md": "5f0f5a53409fefb12ac6f2783156dd23a63d8a4cd506d4812cafc15db59d7a29",
+    "chemistry/seed.fixture.json": "c8ffac34005ab19a53f5b8036bb23c1838024c4a535fea889bf13a290b7353d7",
+    "computation/expected.structural.json": "072487666ccd16de326268f77cff30441c7fe71415cd01a3d193cd72119b39ca",
+    "computation/holdouts.json": "5dfb04ddf703329a55f458844797fc16d042f678cba6052a05b461c1098f7041",
+    "computation/metadata.json": "2a0a13d6927476a0dd9ae9928dba99b455f8aa30bbc1559c3f6ebb321d720dda",
+    "computation/provenance/SEALED_DUALITY.md": "92ef55a8d80d6e0fd1c5c650eeee0cefc5b0735a006f3f39c59e9cad5e300849",
+    "computation/seed.fixture.json": "8181d1645ee9ce8ab62fa5354aee9fe4e22814796ed3afabf8fe5f511d34c548",
+    "fixtures/manifest.json": "c813c69da50ae15d2e86dde9f6cbd9868212cb57210fffbb1bb07cfc2e69c529",
+    "physics/expected.structural.json": "9bd8ef044c210a930c6d6343cb059b42520a11a1cdf6813d9b2b6fa47fc960f3",
+    "physics/holdouts.json": "a64d3b33e3e8e2eac02ed7d1c22112aa66e75a6eeb5c5f38e9dd548c769323ca",
+    "physics/metadata.json": "6c793c5753dcaffd317388b80d72c1d99c0c927aa4f4bbb1932313dc847456a9",
+    "physics/seed.fixture.json": "71dc9276d7c47a246b9da4a335fcebe7549ca512aa7826ca70194c6771755a3e"
+  }
+}

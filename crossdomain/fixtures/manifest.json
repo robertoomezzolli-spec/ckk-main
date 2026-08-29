@@ -1,0 +1,46 @@
+{
+  "suite_version": 2,
+  "starting_commit": "5128409001c77306a8b1cb04583cbc79203e5978",
+  "policy": "Never invent, infer, or silently replace missing domain seeds or outputs. Narrative historical records are not executable fixtures.",
+  "domains": {
+    "physics": {
+      "status": "FOUND_EXACT",
+      "directory": "../physics",
+      "seed_fixture": "../physics/seed.fixture.json",
+      "expected_structural": "../physics/expected.structural.json",
+      "holdouts": "../physics/holdouts.json",
+      "metadata": "../physics/metadata.json"
+    },
+    "chemistry": {
+      "status": "FOUND_PARTIAL",
+      "directory": "../chemistry",
+      "seed_fixture": "../chemistry/seed.fixture.json",
+      "expected_structural": "../chemistry/expected.structural.json",
+      "holdouts": "../chemistry/holdouts.json",
+      "metadata": "../chemistry/metadata.json"
+    },
+    "biology": {
+      "status": "FOUND_PARTIAL",
+      "directory": "../biology",
+      "seed_fixture": "../biology/seed.fixture.json",
+      "expected_structural": "../biology/expected.structural.json",
+      "holdouts": "../biology/holdouts.json",
+      "metadata": "../biology/metadata.json"
+    },
+    "computation": {
+      "status": "FOUND_PARTIAL",
+      "directory": "../computation",
+      "seed_fixture": "../computation/seed.fixture.json",
+      "expected_structural": "../computation/expected.structural.json",
+      "holdouts": "../computation/holdouts.json",
+      "metadata": "../computation/metadata.json"
+    }
+  },
+  "regression_gate": {
+    "all_domains_require_executable_seeds": true,
+    "all_domains_require_frozen_expected_outputs": true,
+    "all_domains_require_independent_holdouts": true,
+    "missing_data_result": "BLOCKED",
+    "fixture_mutation_to_fit_results": "FORBIDDEN"
+  }
+}

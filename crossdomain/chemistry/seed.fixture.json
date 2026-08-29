@@ -1,0 +1,9 @@
+{
+  "domain": "chemistry",
+  "fixture_version": 1,
+  "status": "FOUND_PARTIAL",
+  "executable": false,
+  "seeds": null,
+  "historical_test": {"distinction": ["DEGENERACY", "OCCUPANCY"], "candidate_signature": "E:(state_class, carrier_identity)->N_max"},
+  "reason": "The sealed record contains a methodology and missing distinction, but no executable seed list."
+}
