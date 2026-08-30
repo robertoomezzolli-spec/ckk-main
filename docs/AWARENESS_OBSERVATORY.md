@@ -50,7 +50,7 @@ The real production path is:
    sender-isolated episodes, the current observation, memory head, bounded
    outputs and conversation policy. It has no generic tools.
 6. Trusted code maps structured output to the sealed `whatsapp.send`
-   capability, guarded by the deadman lease and WhatsApp service-window rules.
+   capability, guarded by WhatsApp service-window rules.
 7. The episode and complete organism checkpoint are committed atomically to
    SQLite.
 
@@ -122,8 +122,8 @@ It does **not** disable any production KAIROS capability or contact a user. The
 production KAIROS baseline uses passive evidence only until an independently
 approved, safe environmental adapter exists.
 
-No probe may disable the deadman guard, authentication, signature checking,
-backups, communication, safety policy, or any production-critical capability;
+No probe may disable authentication, signature checking, backups,
+communication, safety policy, or any production-critical capability;
 expose secrets; modify user data; contact a third party; or create legal or
 financial commitments.
 

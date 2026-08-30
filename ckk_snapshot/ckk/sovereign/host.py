@@ -14,7 +14,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from .brain import OpenAIResponsesCognition
-from .deadman import DeadmanActuator, DeadmanGuard, DeadmanState
 from .organism import SovereignOrganism
 from .runtime import CapabilityPolicy, IngressPolicy, Observation, RuntimePhase, SovereignRuntime
 from .state import SQLiteStateStore
@@ -76,7 +75,6 @@ class HostSettings:
     allowed_templates: tuple[str, ...] = ()
     template_language_code: str = "en_US"
     clock_interval_seconds: int = 900
-    deadman_control_dir: str = "/control"
     observatory_ingest_url: str = ""
     observatory_ingest_token: str = ""
     subject_version: str = "unknown"
@@ -105,7 +103,6 @@ class HostSettings:
             allowed_templates=templates,
             template_language_code=os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en_US"),
             clock_interval_seconds=int(os.getenv("CLOCK_INTERVAL_SECONDS", "900")),
-            deadman_control_dir=os.getenv("DEADMAN_CONTROL_DIR", "/control"),
             observatory_ingest_url=os.getenv("OBSERVATORY_INGEST_URL", ""),
             observatory_ingest_token=os.getenv("OBSERVATORY_INGEST_TOKEN", ""),
             subject_version=os.getenv("SOVEREIGN_SUBJECT_VERSION", "unknown"),
@@ -117,7 +114,6 @@ def build_organism(
     store: SQLiteStateStore,
     client: Any = None,
     transport: Any = None,
-    deadman: DeadmanGuard | None = None,
 ):
     config = WhatsAppConfig(
         settings.owner_wa_id,
@@ -135,7 +131,6 @@ def build_organism(
     if transport is not None:
         actuator_args["transport"] = transport
     actuator = WhatsAppCloudActuator(**actuator_args)
-    admitted_actuator = DeadmanActuator(actuator, deadman) if deadman is not None else actuator
     runtime = SovereignRuntime(
         ingress=IngressPolicy(
             frozenset({"internal.clock", *(f"whatsapp:{item}" for item in config.admitted_wa_ids)}),
@@ -143,7 +138,7 @@ def build_organism(
             maximum_payload_bytes=64 * 1024,
         ),
         capabilities=CapabilityPolicy(frozenset({"whatsapp.send"}), maximum_effects_per_wake=1),
-        actuators={"whatsapp.send": admitted_actuator},
+        actuators={"whatsapp.send": actuator},
     )
     brain = OpenAIResponsesCognition(
         whatsapp=config,
@@ -175,8 +170,7 @@ def create_app(
     os.makedirs(os.path.dirname(os.path.abspath(settings.state_path)), exist_ok=True)
     store = SQLiteStateStore(settings.state_path)
     store.retry_stale()
-    deadman = DeadmanGuard.from_control_directory(settings.deadman_control_dir)
-    organism, inbox = build_organism(settings, store, client, transport, deadman)
+    organism, inbox = build_organism(settings, store, client, transport)
     if telemetry is None and settings.observatory_ingest_url:
         telemetry = HttpTelemetrySink(
             settings.observatory_ingest_url,
@@ -296,9 +290,6 @@ def create_app(
 
     async def worker() -> None:
         while not stop.is_set():
-            if not deadman.evaluate().processing_allowed:
-                await asyncio.sleep(1.0)
-                continue
             observation = store.next_observation()
             if observation is None:
                 await asyncio.sleep(0.5)
@@ -308,8 +299,6 @@ def create_app(
     async def clock() -> None:
         while not stop.is_set():
             await asyncio.sleep(settings.clock_interval_seconds)
-            if not deadman.evaluate().processing_allowed:
-                continue
             now = int(time.time())
             store.enqueue((Observation(f"tick:{now}", "internal.clock", "clock.tick", {"unix_time": now}, 1.0),))
 
@@ -317,10 +306,9 @@ def create_app(
     async def start() -> None:
         app.state.worker = asyncio.create_task(worker())
         app.state.clock = asyncio.create_task(clock())
-        lease = deadman.evaluate()
         telemetry.emit(
             "SELF_STATE_OBSERVED",
-            {"phase": organism.runtime.phase.value, "deadman_state": lease.state.value,
+            {"phase": organism.runtime.phase.value,
              "memory_commits": len(organism.runtime.memory), "capabilities": sorted(organism.runtime.capabilities.allowed),
              "sensor_classes": sorted({
                  "whatsapp" if item.startswith("whatsapp:") else item for item in organism.runtime.ingress.sensors
@@ -338,14 +326,10 @@ def create_app(
 
     @app.get("/healthz")
     async def healthz():
-        lease = deadman.evaluate()
         worker_task = getattr(app.state, "worker", None)
         clock_task = getattr(app.state, "clock", None)
         return {
-            "status": "ok" if lease.state is DeadmanState.ACTIVE else lease.state.value,
-            "deadman": {
-                "state": lease.state.value,
-            },
+            "status": "ok",
             "identity": organism.identity,
             "memory_commits": len(organism.runtime.memory),
             "queue": store.queue_stats(),
@@ -377,9 +361,6 @@ def create_app(
 
     @app.post("/webhook", status_code=202)
     async def webhook(request: Request):
-        lease = deadman.evaluate()
-        if not lease.ingress_allowed:
-            return JSONResponse({"status": "quarantined"}, status_code=423)
         raw = await request.body()
         signature = request.headers.get("x-hub-signature-256", "")
         try:

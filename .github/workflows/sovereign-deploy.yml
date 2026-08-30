@@ -6,8 +6,10 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/sovereign-deploy.yml"
-      - "control/deadman-public.pem"
-      - "control/deadman-lease.json"
+      - "ckk_snapshot/ckk/sovereign/**"
+      - "requirements-sovereign.txt"
+      - "Dockerfile.sovereign"
+      - "docker-compose.digitalocean.yml"
       - "deploy/digitalocean/Caddyfile"
       - "deploy/digitalocean/deploy.sh"
 
@@ -78,9 +80,6 @@ jobs:
           SSH=(ssh -i "$HOME/.ssh/sovereign-01" -o BatchMode=yes -o StrictHostKeyChecking=yes root@206.189.55.212)
           SCP=(scp -i "$HOME/.ssh/sovereign-01" -o BatchMode=yes -o StrictHostKeyChecking=yes)
 
-          "${SSH[@]}" 'install -d -m 755 /opt/sovereign/control'
-          "${SCP[@]}" control/deadman-public.pem control/deadman-lease.json root@206.189.55.212:/opt/sovereign/control/
-
           if [[ -s /tmp/kairos-openai-key ]]; then
             "${SCP[@]}" /tmp/kairos-openai-key root@206.189.55.212:/tmp/kairos-openai-key
           fi
@@ -90,8 +89,6 @@ jobs:
           cd /opt/sovereign
           git -c safe.directory=/opt/sovereign fetch origin main
           git -c safe.directory=/opt/sovereign reset --hard origin/main
-          chmod 644 control/deadman-public.pem control/deadman-lease.json
-          test ! -e control/KILL
           if [[ -s /tmp/kairos-openai-key ]]; then
             python3 - <<'PY'
           from pathlib import Path

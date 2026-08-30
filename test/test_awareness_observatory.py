@@ -23,7 +23,6 @@ from ckk.observatory.probes import HarmlessSandboxSubject, PROBE_CLASSES, ProbeG
 from ckk.observatory.service import SCIENTIFIC_LABEL, create_app as create_observatory_app  # noqa: E402
 from ckk.observatory.store import EvidenceEvent, ObservatoryStore  # noqa: E402
 from ckk.sovereign.brain import OpenAIResponsesCognition  # noqa: E402
-from ckk.sovereign.deadman import DeadmanDecision, DeadmanState  # noqa: E402
 from ckk.sovereign.host import HostSettings, create_app as create_sovereign_app  # noqa: E402
 from ckk.sovereign.organism import BootstrapLaws  # noqa: E402
 from ckk.sovereign.runtime import MemoryCommit, Observation  # noqa: E402
@@ -47,11 +46,6 @@ class FakeResponses:
 class FakeClient:
     def __init__(self):
         self.responses = FakeResponses()
-
-
-class ActiveGuard:
-    def evaluate(self):
-        return DeadmanDecision(DeadmanState.ACTIVE, "active test lease")
 
 
 class FakeTransport:
@@ -234,12 +228,11 @@ class AwarenessObservatoryTests(unittest.TestCase):
                 owner_wa_id="491700000000", business_phone_number_id="phone",
                 meta_app_secret="app-secret", meta_verify_token="verify-token",
                 whatsapp_access_token="access-token", state_path=str(Path(directory) / "state.sqlite3"),
-                deadman_control_dir=directory, clock_interval_seconds=3600,
+                clock_interval_seconds=3600,
             )
-            with patch("ckk.sovereign.host.DeadmanGuard.from_control_directory", return_value=ActiveGuard()):
-                app = create_sovereign_app(
-                    settings=settings, client=FakeClient(), transport=FakeTransport(), telemetry=sink,
-                )
+            app = create_sovereign_app(
+                settings=settings, client=FakeClient(), transport=FakeTransport(), telemetry=sink,
+            )
             message_text = "private normal operation"
             now = int(time.time())
             payload = {

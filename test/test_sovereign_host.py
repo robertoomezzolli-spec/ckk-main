@@ -5,20 +5,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ckk_snapshot"))
 
-from ckk.sovereign.deadman import DeadmanDecision, DeadmanState  # noqa: E402
 from ckk.sovereign.host import HostSettings, create_app  # noqa: E402
-
-
-class RestrictedGuard:
-    def evaluate(self):
-        return DeadmanDecision(DeadmanState.RESTRICTED, "test fixture")
 
 
 class SovereignHostTests(unittest.TestCase):
@@ -31,15 +24,14 @@ class SovereignHostTests(unittest.TestCase):
                 meta_verify_token="verify-token",
                 whatsapp_access_token="access-token",
                 state_path=str(Path(directory) / "state.sqlite3"),
-                deadman_control_dir=directory,
             )
-            with patch(
-                "ckk.sovereign.host.DeadmanGuard.from_control_directory",
-                return_value=RestrictedGuard(),
-            ):
-                app = create_app(settings=settings, client=object())
+            app = create_app(settings=settings, client=object())
 
             with TestClient(app) as client:
+                health = client.get("/healthz")
+                self.assertEqual(health.status_code, 200)
+                self.assertEqual(health.json()["status"], "ok")
+                self.assertNotIn("deadman", health.json())
                 privacy = client.get("/privacy")
                 self.assertEqual(privacy.status_code, 200)
                 self.assertIn("KAIROS Privacy Policy", privacy.text)
