@@ -1,7 +1,10 @@
 from dataclasses import dataclass
 from typing import Tuple, Optional
 
-MAXDIM = 4
+# Structural dimension is unbounded. Resource exhaustion is controlled by the
+# experiment runner's explicit wall-clock, RAM, node and derivation-event
+# budgets; it is not encoded as a mathematical dimension.
+MAXDIM = None
 MAXORD = 4
 INF = -1
 RECURRENCE="RECURRENCE"; SYMMETRY="SYMMETRY"; BOUNDCOND="BOUNDCOND"; CARRIER="CARRIER"; CYCLE="CYCLE"; PRODUCT="PRODUCT"; BUNDLE="BUNDLE"; INTEGER="INTEGER"; BOUNDARY="BOUNDARY"; WEIGHT="WEIGHT"; FILTER="FILTER"
@@ -31,7 +34,7 @@ def op_close(s):
 
 def op_product(a,b):
     if a.kind not in (CYCLE,PRODUCT) or b.kind not in (CYCLE,PRODUCT):return None
-    if a.dim+b.dim>MAXDIM:return None
+    if MAXDIM is not None and a.dim+b.dim>MAXDIM:return None
     if a.sym!=b.sym or a.bc!=b.bc or a.order!=b.order:return None
     # The compact structural signature has no factor-level dual state. A mixed
     # pair therefore cannot be collapsed into one output flag without losing

@@ -265,7 +265,7 @@ def regression_markdown(report):
         lines.append(f"- `{name}`: **{row['status']}**")
     lines.extend([
         "",
-        "`MAXDIM=4` is recorded only as an experiment parameter. It is not evidence for emergent 4D spacetime. Structural dual roundtrip is tested; self-duality remains `NOT_EVALUATED`.",
+        "Structural dimension is unbounded in the current core; wall-clock, RAM, node and derivation-event budgets are external compute limits. Structural dual roundtrip is tested; self-duality remains `NOT_EVALUATED`.",
         "",
         "Run 34 remains an unchanged historical presentation snapshot and was not used to fill missing expected outputs.",
     ])
