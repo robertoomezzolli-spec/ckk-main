@@ -1,0 +1,30 @@
+{
+  "status": "OBSERVED_ENDPOINT_ONLY",
+  "epoch": "J2000 approximate elements",
+  "planet_nine_in_training_data": false,
+  "sources": {
+    "orbital_elements": "https://ssd.jpl.nasa.gov/planets/approx_pos.html",
+    "physical_parameters": "https://ssd.jpl.nasa.gov/planets/phys_par.html",
+    "formation_context": "https://science.nasa.gov/solar-system/solar-system-facts/"
+  },
+  "sun": {
+    "formation_age_gyr_approx": 4.6
+  },
+  "planets": [
+    {"name":"Mercury","mass_1e24kg":0.330103,"a_au":0.38709927,"e":0.20563593,"i_deg":7.00497902,"long_peri_deg":77.45779628,"long_node_deg":48.33076593},
+    {"name":"Venus","mass_1e24kg":4.86731,"a_au":0.72333566,"e":0.00677672,"i_deg":3.39467605,"long_peri_deg":131.60246718,"long_node_deg":76.67984255},
+    {"name":"Earth","mass_1e24kg":5.97217,"a_au":1.00000261,"e":0.01671123,"i_deg":-0.00001531,"long_peri_deg":102.93768193,"long_node_deg":0.0},
+    {"name":"Mars","mass_1e24kg":0.641691,"a_au":1.52371034,"e":0.09339410,"i_deg":1.84969142,"long_peri_deg":-23.94362959,"long_node_deg":49.55953891},
+    {"name":"Jupiter","mass_1e24kg":1898.125,"a_au":5.20288700,"e":0.04838624,"i_deg":1.30439695,"long_peri_deg":14.72847983,"long_node_deg":100.47390909},
+    {"name":"Saturn","mass_1e24kg":568.317,"a_au":9.53667594,"e":0.05386179,"i_deg":2.48599187,"long_peri_deg":92.59887831,"long_node_deg":113.66242448},
+    {"name":"Uranus","mass_1e24kg":86.8099,"a_au":19.18916464,"e":0.04725744,"i_deg":0.77263783,"long_peri_deg":170.95427630,"long_node_deg":74.01692503},
+    {"name":"Neptune","mass_1e24kg":102.4092,"a_au":30.06992276,"e":0.00859048,"i_deg":1.77004347,"long_peri_deg":44.96476227,"long_node_deg":131.78422574}
+  ],
+  "holdouts": {
+    "planet_nine": {
+      "sealed": true,
+      "parameters_present": false,
+      "rule": "Do not ingest any Planet Nine mass/orbit/location constraint until Stage D leave-one-out calibration is frozen."
+    }
+  }
+}
