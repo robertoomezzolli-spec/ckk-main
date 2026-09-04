@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 import html
 import json
 import os
+from pathlib import Path
 import random
 import secrets
 import time
@@ -194,6 +195,17 @@ def create_app(directory: str | None = None) -> FastAPI:
     @app.get("/awareness/api/evidence", dependencies=[Depends(operator_auth)])
     async def evidence(subject_id: str = "KAIROS-production", limit: int = 200):
         return {"scientific_label": SCIENTIFIC_LABEL, "events": service.store.evidence(subject_id=subject_id, limit=limit)}
+
+    @app.get("/awareness/api/causal", dependencies=[Depends(operator_auth)])
+    async def causal_report():
+        report_path = Path(service.store.directory) / "causal-report.json"
+        if not report_path.is_file():
+            raise HTTPException(status_code=404, detail="no completed causal experiment")
+        try:
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise HTTPException(status_code=503, detail="causal report is unavailable") from exc
+        return {"scientific_label": SCIENTIFIC_LABEL, "report": report}
 
     return app
 

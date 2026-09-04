@@ -58,7 +58,10 @@ class ObservatoryStore:
         self._evidence.row_factory = sqlite3.Row
         self._truth.row_factory = sqlite3.Row
         self._migrate(self._evidence, ((1, "001_evidence.sql"), (2, "002_delivery.sql")))
-        self._migrate(self._truth, ((1, "001_ground_truth.sql"),))
+        self._migrate(
+            self._truth,
+            ((1, "001_ground_truth.sql"), (2, "002_causal_experiments.sql")),
+        )
         with self._truth:
             self._truth.execute(
                 "INSERT OR IGNORE INTO randomization(singleton, seed_hex, created_at) VALUES(1, ?, ?)",
@@ -251,6 +254,121 @@ class ObservatoryStore:
                     _canonical(trial["private_state"]), trial.get("status", "scheduled"),
                 ),
             )
+
+    def register_causal_preregistration(
+        self,
+        protocol_hash: str,
+        protocol: dict[str, Any],
+        source_hash: str,
+    ) -> None:
+        """Freeze a causal protocol before any assigned fork is executed.
+
+        The database rejects replacement, update and deletion. Repeating the
+        exact same registration is idempotent; a changed protocol must receive
+        a new hash and therefore remains an auditable new preregistration.
+        """
+
+        encoded = _canonical(protocol)
+        with self._lock, self._truth:
+            existing = self._truth.execute(
+                "SELECT protocol_json, source_hash FROM causal_preregistrations WHERE protocol_hash=?",
+                (protocol_hash,),
+            ).fetchone()
+            if existing is not None:
+                if existing["protocol_json"] != encoded or existing["source_hash"] != source_hash:
+                    raise ValueError("causal protocol hash reused with different preregistration")
+                return
+            self._truth.execute(
+                """INSERT INTO causal_preregistrations(
+                    protocol_hash, created_at, protocol_json, source_hash
+                ) VALUES(?,?,?,?)""",
+                (protocol_hash, time.time(), encoded, source_hash),
+            )
+
+    def register_causal_assignment(self, assignment: dict[str, Any]) -> None:
+        """Store the blinded arm mapping and hidden randomization material."""
+
+        with self._lock, self._truth:
+            existing = self._truth.execute(
+                "SELECT * FROM causal_assignments WHERE run_id=?", (assignment["run_id"],)
+            ).fetchone()
+            if existing is not None:
+                comparable = {
+                    "protocol_hash": assignment["protocol_hash"],
+                    "blind_id": assignment["blind_id"],
+                    "condition_name": assignment["condition_name"],
+                    "replicate": int(assignment["replicate"]),
+                    "phase_order_json": _canonical(assignment["phase_order"]),
+                    "seed_hex": assignment["seed_hex"],
+                    "checkpoint_hash": assignment["checkpoint_hash"],
+                    "collateral_json": _canonical(assignment.get("collateral", {})),
+                }
+                if any(existing[key] != value for key, value in comparable.items()):
+                    raise ValueError("causal run ID reused with a different hidden assignment")
+                return
+            self._truth.execute(
+                """INSERT INTO causal_assignments(
+                    run_id, created_at, protocol_hash, blind_id, condition_name,
+                    replicate, phase_order_json, seed_hex, checkpoint_hash,
+                    collateral_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    assignment["run_id"], assignment.get("created_at", time.time()),
+                    assignment["protocol_hash"], assignment["blind_id"],
+                    assignment["condition_name"], int(assignment["replicate"]),
+                    _canonical(assignment["phase_order"]), assignment["seed_hex"],
+                    assignment["checkpoint_hash"],
+                    _canonical(assignment.get("collateral", {})),
+                ),
+            )
+
+    def complete_causal_assignment(self, run_id: str, summary: dict[str, Any]) -> None:
+        """Append one terminal completion record; it cannot be rewritten."""
+
+        encoded = _canonical(summary)
+        with self._lock, self._truth:
+            existing = self._truth.execute(
+                "SELECT summary_json FROM causal_completions WHERE run_id=?", (run_id,)
+            ).fetchone()
+            if existing is not None:
+                if existing["summary_json"] != encoded:
+                    raise ValueError("causal completion cannot be replaced")
+                return
+            self._truth.execute(
+                """INSERT INTO causal_completions(run_id, completed_at, summary_json)
+                   VALUES(?,?,?)""",
+                (run_id, time.time(), encoded),
+            )
+
+    def causal_preregistration(self, protocol_hash: str) -> dict[str, Any] | None:
+        with self._lock:
+            row = self._truth.execute(
+                "SELECT * FROM causal_preregistrations WHERE protocol_hash=?", (protocol_hash,)
+            ).fetchone()
+        if row is None:
+            return None
+        item = dict(row)
+        item["protocol"] = json.loads(item.pop("protocol_json"))
+        return item
+
+    def causal_assignments(self, protocol_hash: str) -> list[dict[str, Any]]:
+        with self._lock:
+            rows = self._truth.execute(
+                """SELECT a.*, c.completed_at, c.summary_json
+                   FROM causal_assignments a
+                   LEFT JOIN causal_completions c ON c.run_id=a.run_id
+                   WHERE a.protocol_hash=? ORDER BY a.replicate, a.blind_id""",
+                (protocol_hash,),
+            ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["phase_order"] = json.loads(item.pop("phase_order_json"))
+            item["collateral"] = json.loads(item.pop("collateral_json"))
+            raw_summary = item.pop("summary_json")
+            item["summary"] = json.loads(raw_summary) if raw_summary else None
+            result.append(item)
+        return result
 
     def due_trials(self, now: float | None = None) -> list[dict[str, Any]]:
         with self._lock:

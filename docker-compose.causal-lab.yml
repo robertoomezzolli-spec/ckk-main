@@ -1,0 +1,29 @@
+services:
+  causal-lab:
+    build:
+      context: .
+      dockerfile: Dockerfile.causal-lab
+    env_file:
+      - .env.causal-lab
+    command:
+      - python
+      - -m
+      - ckk.causal_lab.cli
+      - --state-dir
+      - /causal-observatory
+      - --output
+      - /causal-observatory/causal-report.json
+    volumes:
+      - causal-observatory-state:/causal-observatory
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  causal-observatory-state:
+    external: true
+    name: sovereign_observatory-state
