@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements-sovereign.txt
 COPY ckk_snapshot/ckk/sovereign ./ckk_snapshot/ckk/sovereign
 COPY ckk_snapshot/ckk/observatory ./ckk_snapshot/ckk/observatory
 COPY ckk_snapshot/ckk/causal_lab ./ckk_snapshot/ckk/causal_lab
+COPY Dockerfile.causal-lab docker-compose.causal-lab.yml ./
 RUN mkdir -p /causal-observatory \
     && useradd --system --uid 10002 causal-lab \
     && chown -R causal-lab:causal-lab /causal-observatory
