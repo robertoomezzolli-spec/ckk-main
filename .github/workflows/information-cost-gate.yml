@@ -1,0 +1,30 @@
+name: information-cost-gate
+
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+    paths:
+      - experiments/information_cost_gate.py
+      - .github/workflows/information-cost-gate.yml
+      - ckk_snapshot/ckk/gen/grammar.py
+      - ckk_snapshot/ckk/gen/expand.py
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run blind irreversible information cost gate
+        run: python experiments/information_cost_gate.py
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: information-cost-gate-result
+          path: results/information_cost_gate.json
+          if-no-files-found: error
