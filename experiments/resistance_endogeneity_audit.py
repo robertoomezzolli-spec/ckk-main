@@ -28,20 +28,13 @@ GRAMMAR = ROOT / "ckk_snapshot" / "ckk" / "gen" / "grammar.py"
 DIMS = ROOT / "audit" / "run34-dimension-transitions.csv"
 OUT = ROOT / "results" / "resistance_endogeneity_audit.json"
 
-# Whole-word / phrase guards only; intentionally avoid single-letter tokens.
 FORBIDDEN = [
     r"\bgravity\b", r"\bgravitation\b", r"\bnewton\b", r"\blorentz\b",
     r"\blight\s*speed\b", r"\bspeed\s*of\s*light\b", r"\bgamma\b",
     r"\brelativity\b", r"\bmass\b", r"\benergy\b", r"\bmomentum\b",
     r"inverse[-_ ]square", r"1\s*/\s*r\s*\*\*\s*2",
 ]
-
-# Structural names already present in CKK. These are not physics.
 REQUIRED_STRUCTURAL = ["BOUNDARY", "WEIGHT", "FILTER", "PRODUCT", "CYCLE"]
-
-# A numerical law capable of selecting a response must be explicit in the
-# frozen grammar; names alone do not count. We deliberately use conservative
-# signatures so absence is meaningful and presence is inspectable.
 ACCESSIBILITY_SIGNATURES = [
     r"\baccessibility\b", r"\btransition_cost\b", r"\bresistance\b",
     r"\bconstraint_load\b",
@@ -62,17 +55,16 @@ def dimension_audit():
                 "reason": "frozen dimension audit missing"}
     dims = set()
     rows = []
+    dim_keys = ("source_dim", "target_dim", "src_dim", "dst_dim", "dimension", "dim")
     with DIMS.open(newline="") as f:
         rd = csv.DictReader(f)
         for row in rd:
             rows.append(row)
-            for key in ("src_dim", "dst_dim", "dimension", "dim"):
+            for key in dim_keys:
                 if key in row and row[key] not in (None, ""):
                     try: dims.add(int(float(row[key])))
                     except ValueError: pass
-    # The frozen audit may contain d=3, but mere occurrence is not selection.
-    # We only credit unique selection if the audit itself exposes a predeclared
-    # selector/rank flag that singles out 3. Current run34 does not.
+
     selector_columns = [k for k in (rows[0].keys() if rows else [])
                         if any(tok in k.lower() for tok in ("select", "winner", "rank", "preferred"))]
     selected = []
@@ -80,7 +72,7 @@ def dimension_audit():
         for col in selector_columns:
             val = str(row.get(col, "")).strip().lower()
             if val in {"1", "true", "yes", "winner", "selected"}:
-                for key in ("dimension", "dim", "dst_dim", "src_dim"):
+                for key in dim_keys:
                     if row.get(key, "") != "":
                         try: selected.append(int(float(row[key]))); break
                         except ValueError: pass
@@ -92,7 +84,7 @@ def dimension_audit():
         "selected_dimensions": sorted(set(selected)),
         "dimension_3_present": 3 in dims,
         "dimension_3_unique": unique3,
-        "reason": "presence is not derivation; a frozen selector must uniquely choose d=3",
+        "reason": "d=3 occurrence is not derivation; a frozen selector must uniquely choose d=3",
     }
 
 
@@ -122,45 +114,39 @@ def main():
         status = "CKK_ARCHITECTURE_GATE_FAIL"
 
     result = {
-        "schema": "ckk.external.resistance-endogeneity-audit.v1",
+        "schema": "ckk.external.resistance-endogeneity-audit.v1.1",
         "status": status,
         "kernel_modified": False,
         "physics_leakage": {"clean": physics_clean, "matches": forbidden},
         "structural_primitives": {"present": structural, "complete": structural_complete},
         "dimension_selection": dims,
-        "endogenous_accessibility_rule": {
-            "derived": endogenous_accessibility,
-            "matches": accessibility,
-        },
-        "endogenous_boundary_response_law": {
-            "derived": endogenous_boundary_law,
-            "matches": boundary_law,
-        },
+        "endogenous_accessibility_rule": {"derived": endogenous_accessibility, "matches": accessibility},
+        "endogenous_boundary_response_law": {"derived": endogenous_boundary_law, "matches": boundary_law},
         "tests": {
             "kernel_target_physics_clean": physics_clean,
             "boundary_weight_filter_structure_present": structural_complete,
+            "three_dimensions_present": dims["dimension_3_present"],
             "three_dimensions_independently_selected": dims["dimension_3_unique"],
             "single_accessibility_or_transition_cost_scalar_emitted": endogenous_accessibility,
             "specific_boundary_response_law_fixed": endogenous_boundary_law,
             "full_endogenous_derivation": derivation,
         },
         "interpretation": (
-            "CKK contains the structural machinery compatible with a boundary/accessibility "
-            "interpretation, while the frozen material does not yet independently select d=3, "
-            "emit a single numerical accessibility/transition-cost scalar, or fix its boundary "
-            "response law. Therefore the external inverse-square + boundary-divergence PASS is "
-            "a compatibility result, not a derivation of gravity or relativity."
+            "CKK contains structural machinery compatible with a boundary/accessibility interpretation. "
+            "Its frozen dimension audit includes d=3, but does not independently select d=3; and the "
+            "frozen grammar does not emit a single numerical accessibility/transition-cost scalar or "
+            "fix a boundary response law. Therefore the external inverse-square + boundary-divergence "
+            "PASS is architecture compatibility, not a derivation of gravity or relativity."
         ),
         "next_falsifiable_requirement": (
-            "Without adding physics, obtain from frozen CKK provenance one scalar/state functional "
-            "whose independently generated rules both (i) select a held-out spatial scaling and "
-            "(ii) fix a held-out boundary scaling. No post-hoc choice of dimension, alpha, or closing law."
+            "Without adding physics, obtain from frozen CKK provenance one scalar/state functional whose "
+            "independently generated rules both select a held-out spatial scaling and fix a held-out "
+            "boundary scaling. No post-hoc choice of dimension, alpha, or closing law."
         ),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
     print(json.dumps(result, indent=2, sort_keys=True))
-    # Audit succeeds technically when it reaches a scientifically classified result.
     raise SystemExit(0 if status != "CKK_ARCHITECTURE_GATE_FAIL" else 1)
 
 if __name__ == "__main__":
