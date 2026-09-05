@@ -6,6 +6,7 @@ on:
       - experiment/solar-system-provenance-cascade
     paths:
       - experiments/causal_approach_dilation_gate.py
+      - experiments/causal_approach_dilation_gate_l5.py
       - .github/workflows/causal-approach-dilation.yml
       - ckk_snapshot/ckk/gen/grammar.py
       - ckk_snapshot/ckk/gen/expand.py
@@ -20,11 +21,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run blind causal approach dilation gate
-        run: python experiments/causal_approach_dilation_gate.py
+      - name: Run blind causal approach dilation gate at level 5
+        run: python experiments/causal_approach_dilation_gate_l5.py
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
-          name: causal-approach-dilation-result
-          path: results/causal_approach_dilation_gate.json
+          name: causal-approach-dilation-result-l5
+          path: results/causal_approach_dilation_gate_l5.json
           if-no-files-found: error
