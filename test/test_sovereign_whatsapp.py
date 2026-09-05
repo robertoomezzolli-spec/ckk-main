@@ -15,9 +15,11 @@ from ckk.sovereign.runtime import (  # noqa: E402
     SovereignRuntime,
 )
 from ckk.sovereign.whatsapp import (  # noqa: E402
+    ALLOWED_RELAY_PEOPLE,
     WhatsAppConfig,
     WhatsAppInbox,
     WhatsAppSimulationActuator,
+    explicit_relay_target,
     extract_delivery_statuses,
     service_intent,
     template_intent,
@@ -125,6 +127,22 @@ class SovereignWhatsAppTests(unittest.TestCase):
         actuator = WhatsAppSimulationActuator(config, inbox, now=lambda: 100)
         effect = actuator.execute(service_intent(config, "hello", "reply", ADDITIONAL))
         self.assertEqual(effect.output["would_send"]["to"], ADDITIONAL)
+
+    def test_sealed_relay_contacts_resolve_names_without_model_supplied_ids(self):
+        config = WhatsAppConfig(OWNER, PHONE_ID, additional_wa_ids=frozenset({ADDITIONAL}))
+        self.assertEqual(tuple(config.relay_contacts), ALLOWED_RELAY_PEOPLE)
+        self.assertEqual(config.relay_person_for_id(OWNER), "Roberto")
+        self.assertEqual(config.relay_person_for_id(ADDITIONAL), "Amelie")
+        self.assertIsNone(config.relay_person_for_id("third-party"))
+
+    def test_explicit_relay_gate_accepts_natural_requests_and_rejects_numbers_or_self(self):
+        self.assertEqual(explicit_relay_target("Tell Amelie I'll be there at 8.", "Roberto"), "Amelie")
+        self.assertEqual(explicit_relay_target("Schreib Roberto bitte, dass ich später komme.", "Amelie"), "Roberto")
+        self.assertEqual(explicit_relay_target("Ask Amelie if she wants dinner.", "Roberto"), "Amelie")
+        self.assertIsNone(explicit_relay_target("Amelie mag Pasta.", "Roberto"))
+        self.assertIsNone(explicit_relay_target("Tell me about Amelie.", "Roberto"))
+        self.assertIsNone(explicit_relay_target("Schreib +49 170 1234567: Test", "Roberto"))
+        self.assertIsNone(explicit_relay_target("Schreib Roberto: Test", "Roberto"))
 
     def test_delivery_receipts_are_extracted_without_becoming_observations(self):
         payload = {

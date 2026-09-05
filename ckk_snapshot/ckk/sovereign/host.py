@@ -27,6 +27,7 @@ from .whatsapp import (
     WhatsAppCloudActuator,
     WhatsAppConfig,
     WhatsAppInbox,
+    WhatsAppTransportError,
     extract_delivery_statuses,
     service_intent,
     verify_challenge,
@@ -243,13 +244,42 @@ def create_app(
             settings.openai_model,
         )
     telemetry = telemetry or NullTelemetrySink()
-    experiment_capabilities = {
-        "repo.read", "process.run", "process.status", "process.stop", "file.read", "file.hash", "system.metrics"
+    audited_capabilities = {
+        "repo.read",
+        "process.run",
+        "process.status",
+        "process.stop",
+        "file.read",
+        "file.hash",
+        "system.metrics",
+        "whatsapp.send_to_allowed_person",
     }
 
     def record_tool_event(event: dict[str, Any]) -> None:
         store.record_tool_invocation(event)
-        if event.get("logical_name") not in experiment_capabilities:
+        if event.get("logical_name") not in audited_capabilities:
+            return
+        if event.get("logical_name") == "whatsapp.send_to_allowed_person":
+            telemetry.emit(
+                "WHATSAPP_RELAY",
+                {
+                    "capability": event.get("logical_name"),
+                    "requesting_participant": event.get("requesting_participant"),
+                    "intended_recipient": event.get("intended_recipient"),
+                    "start_time": event.get("started_at"),
+                    "finish_time": event.get("finished_at"),
+                    "status": event.get("status"),
+                    "provider_http_status": event.get("provider_http_status"),
+                    "provider_message_ref": (
+                        _event_ref(str(event["provider_message_id"]))
+                        if event.get("provider_message_id") else None
+                    ),
+                    "message_length": (event.get("argument_summary") or {}).get("message_length"),
+                    "content_exported": False,
+                    "phone_identifiers_exported": False,
+                },
+                latency_ms=event.get("latency_ms"),
+            )
             return
         summary = event.get("argument_summary") if isinstance(event.get("argument_summary"), dict) else {}
         telemetry.emit(
@@ -279,6 +309,91 @@ def create_app(
         store.bind_experiment_job(job_id, recipient)
 
     organism.cognition.tool_registry.job_binding_sink = bind_experiment_job
+
+    def send_allowed_relay(
+        request_event_id: str,
+        requester_wa_id: str,
+        intended_person: str,
+        message: str,
+    ) -> dict[str, Any]:
+        contacts = inbox.config.relay_contacts
+        requesting_person = inbox.config.relay_person_for_id(requester_wa_id)
+        if requesting_person is None:
+            raise PermissionError("relay requester is not in the sealed contact allowlist")
+        if intended_person not in contacts:
+            raise PermissionError("relay recipient is not in the sealed contact allowlist")
+        if intended_person == requesting_person:
+            raise PermissionError("relay must target the other allowed participant")
+        reservation = store.reserve_whatsapp_relay(
+            request_event_id, requesting_person, intended_person
+        )
+        if not reservation.get("new"):
+            state = str(reservation.get("state"))
+            if state == "ACCEPTED":
+                return {
+                    "status": "already_accepted",
+                    "requesting_participant": requesting_person,
+                    "intended_recipient": intended_person,
+                    "provider_http_status": reservation.get("provider_http_status"),
+                    "provider_message_id": reservation.get("meta_message_id"),
+                    "delivery_status": reservation.get("delivery_status"),
+                    "idempotent": True,
+                    "belief_status": "not_committed",
+                }
+            error = (
+                str(reservation.get("failure_type") or "provider rejected the relay")
+                if state == "REJECTED"
+                else "prior relay outcome is uncertain; duplicate send suppressed"
+            )
+            return {
+                "status": "rejected" if state == "REJECTED" else "uncertain",
+                "requesting_participant": requesting_person,
+                "intended_recipient": intended_person,
+                "provider_http_status": reservation.get("provider_http_status"),
+                "error": error,
+                "idempotent": True,
+                "belief_status": "not_committed",
+            }
+        actuator = organism.runtime.actuators["whatsapp.send"]
+        try:
+            effect = actuator.execute(service_intent(
+                inbox.config,
+                f"{requesting_person} via KAIROS:\n{message}",
+                "explicit owner-approved person-to-person relay",
+                contacts[intended_person],
+            ))
+            output = effect.output if isinstance(effect.output, dict) else {}
+            provider = output.get("provider") if isinstance(output.get("provider"), dict) else {}
+            provider_messages = provider.get("messages") if isinstance(provider.get("messages"), list) else []
+            meta_message_id = str((provider_messages[0] if provider_messages else {}).get("id") or "")
+            provider_http_status = int(output.get("provider_http_status") or 0)
+            store.complete_whatsapp_relay(
+                request_event_id, provider_http_status, meta_message_id
+            )
+        except Exception as exc:
+            provider_status = exc.status_code if isinstance(exc, WhatsAppTransportError) else None
+            store.fail_whatsapp_relay(request_event_id, type(exc).__name__, provider_status)
+            raise
+        logger.info(
+            "WhatsApp relay accepted requester=%s recipient=%s provider_http_status=%s message_ref=%s",
+            requesting_person,
+            intended_person,
+            provider_http_status,
+            _event_ref(meta_message_id),
+        )
+        return {
+            "status": "accepted",
+            "requesting_participant": requesting_person,
+            "intended_recipient": intended_person,
+            "provider_http_status": provider_http_status,
+            "provider_message_id": meta_message_id,
+            "delivery_status": "pending",
+            "idempotent": False,
+            "instruction": f"Reply briefly that the message was sent to {intended_person}.",
+            "belief_status": "not_committed",
+        }
+
+    organism.cognition.tool_registry.relay_sender = send_allowed_relay
     app = FastAPI(title="Sovereign Fixpoint Organism", docs_url=None, redoc_url=None)
     stop = asyncio.Event()
     cognition_lock = threading.Lock()
@@ -681,6 +796,29 @@ def create_app(
                 {"message_ref": _event_ref(delivery_status.message_id), "status": delivery_status.status,
                  "provider_timestamp": delivery_status.timestamp},
             )
+            relay = store.update_whatsapp_relay_delivery(
+                delivery_status.message_id, delivery_status.status, delivery_status.timestamp
+            )
+            if relay is not None:
+                logger.info(
+                    "WhatsApp relay delivery requester=%s recipient=%s status=%s message_ref=%s",
+                    relay["requesting_participant"],
+                    relay["intended_recipient"],
+                    delivery_status.status,
+                    _event_ref(delivery_status.message_id),
+                )
+                telemetry.emit(
+                    "WHATSAPP_RELAY_DELIVERY",
+                    {
+                        "requesting_participant": relay["requesting_participant"],
+                        "intended_recipient": relay["intended_recipient"],
+                        "status": delivery_status.status,
+                        "provider_timestamp": delivery_status.timestamp,
+                        "provider_message_ref": _event_ref(delivery_status.message_id),
+                        "content_exported": False,
+                        "phone_identifiers_exported": False,
+                    },
+                )
         return {"status": "queued", "admitted": admitted, "duplicates": len(observations) - admitted}
 
     return app

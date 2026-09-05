@@ -74,6 +74,18 @@ class SQLiteStateStore:
                     recipient TEXT NOT NULL,
                     created_at INTEGER NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS whatsapp_relays (
+                    request_event_id TEXT PRIMARY KEY,
+                    requesting_participant TEXT NOT NULL,
+                    intended_recipient TEXT NOT NULL,
+                    requested_at INTEGER NOT NULL,
+                    state TEXT NOT NULL,
+                    provider_http_status INTEGER,
+                    meta_message_id TEXT UNIQUE,
+                    delivery_status TEXT,
+                    delivery_timestamp INTEGER,
+                    failure_type TEXT
+                );
                 """
             )
 
@@ -203,6 +215,110 @@ class SQLiteStateStore:
                 "SELECT recipient FROM experiment_job_bindings WHERE job_id=?", (job_id,)
             ).fetchone()
         return str(row["recipient"]) if row is not None else None
+
+    def reserve_whatsapp_relay(
+        self,
+        request_event_id: str,
+        requesting_participant: str,
+        intended_recipient: str,
+    ) -> dict[str, Any]:
+        """Reserve exactly one relay per inbound event before external I/O.
+
+        A retry after an uncertain process failure never sends a duplicate.
+        Message content and phone identifiers are deliberately not stored.
+        """
+
+        if not request_event_id or len(request_event_id) > 256:
+            raise ValueError("invalid relay request event")
+        with self._lock, self._db:
+            row = self._db.execute(
+                "SELECT * FROM whatsapp_relays WHERE request_event_id=?", (request_event_id,)
+            ).fetchone()
+            if row is not None:
+                if (
+                    row["requesting_participant"] != requesting_participant
+                    or row["intended_recipient"] != intended_recipient
+                ):
+                    raise PermissionError("relay request cannot be redirected")
+                return dict(row)
+            self._db.execute(
+                "INSERT INTO whatsapp_relays("
+                "request_event_id,requesting_participant,intended_recipient,requested_at,state"
+                ") VALUES(?,?,?,?,?)",
+                (
+                    request_event_id,
+                    requesting_participant,
+                    intended_recipient,
+                    int(time.time()),
+                    "SENDING",
+                ),
+            )
+            return {
+                "request_event_id": request_event_id,
+                "requesting_participant": requesting_participant,
+                "intended_recipient": intended_recipient,
+                "state": "SENDING",
+                "new": True,
+            }
+
+    def complete_whatsapp_relay(
+        self,
+        request_event_id: str,
+        provider_http_status: int,
+        meta_message_id: str,
+    ) -> None:
+        if not meta_message_id:
+            raise ValueError("Meta message ID missing")
+        with self._lock, self._db:
+            cursor = self._db.execute(
+                "UPDATE whatsapp_relays SET state='ACCEPTED',provider_http_status=?,meta_message_id=?,failure_type=NULL "
+                "WHERE request_event_id=? AND state='SENDING'",
+                (int(provider_http_status), meta_message_id, request_event_id),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("relay reservation is not pending")
+
+    def fail_whatsapp_relay(
+        self,
+        request_event_id: str,
+        failure_type: str,
+        provider_http_status: int | None = None,
+    ) -> None:
+        with self._lock, self._db:
+            self._db.execute(
+                "UPDATE whatsapp_relays SET state='REJECTED',provider_http_status=?,failure_type=? "
+                "WHERE request_event_id=? AND state='SENDING'",
+                (provider_http_status, str(failure_type)[:120], request_event_id),
+            )
+
+    def update_whatsapp_relay_delivery(
+        self, meta_message_id: str, status: str, timestamp: int
+    ) -> dict[str, Any] | None:
+        with self._lock, self._db:
+            row = self._db.execute(
+                "SELECT * FROM whatsapp_relays WHERE meta_message_id=?", (meta_message_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            new_status = str(status)[:32]
+            rank = {"sent": 1, "delivered": 2, "read": 3, "failed": 4}
+            current_status = str(row["delivery_status"] or "")
+            if rank.get(new_status, 0) >= rank.get(current_status, 0):
+                self._db.execute(
+                    "UPDATE whatsapp_relays SET delivery_status=?,delivery_timestamp=? WHERE meta_message_id=?",
+                    (new_status, int(timestamp), meta_message_id),
+                )
+            row = self._db.execute(
+                "SELECT * FROM whatsapp_relays WHERE meta_message_id=?", (meta_message_id,)
+            ).fetchone()
+        return dict(row) if row is not None else None
+
+    def whatsapp_relay(self, request_event_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            row = self._db.execute(
+                "SELECT * FROM whatsapp_relays WHERE request_event_id=?", (request_event_id,)
+            ).fetchone()
+        return dict(row) if row is not None else None
 
     def communication_state(self) -> tuple[dict[str, int], list[int]]:
         """Recover service-window and proactive budget state after restart."""

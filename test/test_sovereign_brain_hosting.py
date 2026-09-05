@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "ckk_snapshot"))
 from ckk.sovereign.brain import OpenAIResponsesCognition  # noqa: E402
 from ckk.sovereign.organism import BootstrapLaws, CognitionResult, SovereignOrganism  # noqa: E402
 from ckk.sovereign.runtime import CapabilityPolicy, IngressPolicy, Observation, SovereignRuntime  # noqa: E402
+from ckk.sovereign.research_tools import SealedResearchToolRegistry  # noqa: E402
 from ckk.sovereign.state import SQLiteStateStore  # noqa: E402
 from ckk.sovereign.whatsapp import (  # noqa: E402
     JsonTransportResult,
@@ -39,6 +40,31 @@ class FakeResponses:
 class FakeClient:
     def __init__(self, result):
         self.responses = FakeResponses(result)
+
+
+class ScriptedRelayResponses:
+    def __init__(self, person, message):
+        self.person = person
+        self.message = message
+        self.calls = []
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        if len(self.calls) == 1:
+            return SimpleNamespace(
+                output=[SimpleNamespace(
+                    type="function_call",
+                    name="send_to_allowed_person",
+                    namespace="whatsapp",
+                    call_id="relay-call",
+                    arguments=json.dumps({"person": self.person, "message": self.message}),
+                )],
+                output_text="",
+            )
+        return SimpleNamespace(
+            output=[],
+            output_text=json.dumps(decision("service_message", "model confirmation")),
+        )
 
 
 class FakeTransport:
@@ -120,6 +146,49 @@ class SovereignBrainHostingTests(unittest.TestCase):
         observation = Observation("wa:2", f"whatsapp:{additional}", "message.text", {"text": "Hi"}, 1.0)
         result = brain.reflect((observation,), (), {}, BootstrapLaws())
         self.assertEqual(result.intent.payload["to"], additional)
+
+    def test_explicit_relay_uses_sealed_tool_and_model_context_contains_no_phone_ids(self):
+        additional = "491609876543"
+        scripted = ScriptedRelayResponses("Amelie", "Ich bin um acht da.")
+        relays = []
+        registry = SealedResearchToolRegistry(
+            object(),
+            relay_sender=lambda request_id, requester, person, message: (
+                relays.append((request_id, requester, person, message))
+                or {
+                    "status": "accepted",
+                    "requesting_participant": "Roberto",
+                    "intended_recipient": "Amelie",
+                    "provider_http_status": 200,
+                    "provider_message_id": "wamid.relay",
+                }
+            ),
+        )
+        brain = OpenAIResponsesCognition(
+            WhatsAppConfig(OWNER, "phone", additional_wa_ids=frozenset({additional})),
+            client=SimpleNamespace(responses=scripted),
+            service_window_provider=lambda recipient: True,
+            tool_registry=registry,
+        )
+        observation = Observation(
+            "wa:relay-1", f"whatsapp:{OWNER}", "message.text",
+            {"text": "Schreib Amelie bitte: Ich bin um acht da."}, 1.0,
+        )
+        result = brain.reflect((observation,), (), {}, BootstrapLaws())
+        self.assertEqual(relays, [("wa:relay-1", OWNER, "Amelie", "Ich bin um acht da.")])
+        self.assertEqual(result.intent.payload["to"], OWNER)
+        self.assertEqual(result.intent.payload["text"], "An Amelie gesendet.")
+        serialized_request = json.dumps({
+            "instructions": scripted.calls[0]["instructions"],
+            "input": scripted.calls[0]["input"][0],
+            "tools": scripted.calls[0]["tools"],
+        })
+        self.assertNotIn(OWNER, serialized_request)
+        self.assertNotIn(additional, serialized_request)
+        whatsapp = next(item for item in scripted.calls[0]["tools"] if item["name"] == "whatsapp")
+        relay_tool = next(item for item in whatsapp["tools"] if item["name"] == "send_to_allowed_person")
+        self.assertEqual(relay_tool["parameters"]["properties"]["person"]["enum"], ["Roberto", "Amelie"])
+        self.assertEqual(set(relay_tool["parameters"]["properties"]), {"person", "message"})
 
     def test_brain_cannot_forge_learning_evidence(self):
         learning = [{"key": "self.name", "value": "X", "confidence": 0.9, "evidence_ids": ["fake"], "reason": "no"}]
@@ -214,6 +283,22 @@ class SovereignBrainHostingTests(unittest.TestCase):
                 store.bind_experiment_job(job_id, "491709999999")
             reopened = SQLiteStateStore(path)
             self.assertEqual(reopened.experiment_job_recipient(job_id), OWNER)
+
+    def test_relay_audit_is_idempotent_content_free_and_tracks_delivery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = SQLiteStateStore(str(Path(directory) / "state.sqlite3"))
+            reserved = store.reserve_whatsapp_relay("wa:relay", "Roberto", "Amelie")
+            self.assertTrue(reserved["new"])
+            store.complete_whatsapp_relay("wa:relay", 200, "wamid.relay")
+            repeated = store.reserve_whatsapp_relay("wa:relay", "Roberto", "Amelie")
+            self.assertEqual(repeated["state"], "ACCEPTED")
+            self.assertNotIn("message", repeated)
+            delivered = store.update_whatsapp_relay_delivery("wamid.relay", "delivered", 200)
+            self.assertEqual(delivered["delivery_status"], "delivered")
+            regressed = store.update_whatsapp_relay_delivery("wamid.relay", "sent", 199)
+            self.assertEqual(regressed["delivery_status"], "delivered")
+            with self.assertRaises(PermissionError):
+                store.reserve_whatsapp_relay("wa:relay", "Roberto", "Roberto")
 
 
 if __name__ == "__main__":

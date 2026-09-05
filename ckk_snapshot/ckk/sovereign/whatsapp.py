@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 import hashlib
 import hmac
 import json
+import re
 import time
 from typing import Any, Mapping, Protocol
 from urllib import error, request
@@ -20,6 +21,34 @@ from .runtime import Effect, Intent, Observation
 
 
 SERVICE_WINDOW_SECONDS = 24 * 60 * 60
+ALLOWED_RELAY_PEOPLE = ("Roberto", "Amelie")
+
+
+def explicit_relay_target(text: str, requester: str | None = None) -> str | None:
+    """Return the named other participant only for an explicit relay request.
+
+    This is a deliberately conservative authorization gate, not an intent
+    classifier.  The model may decide what text to relay, but trusted code
+    decides whether a relay tool call is available at all.
+    """
+
+    normalized = " ".join(str(text).casefold().split())
+    if not normalized:
+        return None
+    mentioned = [person for person in ALLOWED_RELAY_PEOPLE if re.search(rf"\b{person.casefold()}\b", normalized)]
+    if len(mentioned) != 1 or (requester and mentioned[0] == requester):
+        return None
+    target = mentioned[0].casefold()
+    verbs = (
+        r"(?:tell|ask|message|write|send|forward|relay|"
+        r"sag\w*|schreib\w*|frag\w*|send\w*|richt\w*|übermittel\w*|teil\w*)"
+    )
+    fillers = r"(?:(?:please|bitte|doch|mal|a|eine|message|nachricht|to|an)\s+){0,4}"
+    action_before_target = re.search(rf"\b{verbs}\b\s+{fillers}\b{target}\b", normalized)
+    target_before_action = re.search(rf"\b{target}\b\s+{fillers}\b{verbs}\b", normalized)
+    if action_before_target is None and target_before_action is None:
+        return None
+    return mentioned[0]
 
 
 def verify_webhook_signature(raw_body: bytes, header: str, app_secret: str) -> bool:
@@ -47,6 +76,20 @@ class WhatsAppConfig:
     @property
     def admitted_wa_ids(self) -> frozenset[str]:
         return frozenset({self.owner_wa_id, *self.additional_wa_ids})
+
+    @property
+    def relay_contacts(self) -> dict[str, str]:
+        """Trusted name-to-ID mapping; this mapping is never model context."""
+
+        if len(self.additional_wa_ids) != 1:
+            raise RuntimeError("sealed relay requires exactly Roberto and one additional participant")
+        amelie = next(iter(self.additional_wa_ids))
+        if not self.owner_wa_id or not amelie or amelie == self.owner_wa_id:
+            raise RuntimeError("sealed relay contacts are not two distinct participants")
+        return {"Roberto": self.owner_wa_id, "Amelie": amelie}
+
+    def relay_person_for_id(self, wa_id: str) -> str | None:
+        return next((name for name, identifier in self.relay_contacts.items() if identifier == wa_id), None)
 
 
 @dataclass(frozen=True)

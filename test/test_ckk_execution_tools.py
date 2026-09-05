@@ -148,9 +148,14 @@ class CKKExecutionToolTests(unittest.TestCase):
             [item["name"] for item in first["tools"]],
             ["whatsapp", "ckk", "research", "repo", "process", "file", "system"],
         )
+        self.assertEqual(
+            [item["name"] for item in first["tools"][0]["tools"]],
+            ["send", "send_to_allowed_person"],
+        )
         self.assertEqual([item["name"] for item in first["tools"][1]["tools"]],
                          ["search", "read", "symbol", "run"])
         self.assertIn("whatsapp.send", outcome["trace"]["capabilities"])
+        self.assertIn("whatsapp.send_to_allowed_person", outcome["trace"]["capabilities"])
         self.assertIn("ckk.run", outcome["trace"]["capabilities"])
         self.assertIn("research.publish", outcome["trace"]["capabilities"])
         self.assertIn("repo.read", outcome["trace"]["capabilities"])
@@ -190,6 +195,48 @@ class CKKExecutionToolTests(unittest.TestCase):
         registry = SealedResearchToolRegistry(FakeCKK())
         with self.assertRaises(PermissionError):
             registry.execute("shell", {"command": "id"})
+
+    def test_relay_tool_is_name_only_explicitly_gated_and_content_free_in_audit(self):
+        sends = []
+        registry = SealedResearchToolRegistry(
+            FakeCKK(),
+            relay_sender=lambda request_id, requester, person, message: (
+                sends.append((request_id, requester, person, message))
+                or {
+                    "status": "accepted",
+                    "requesting_participant": "Roberto",
+                    "intended_recipient": "Amelie",
+                    "provider_http_status": 200,
+                    "provider_message_id": "wamid.relay",
+                }
+            ),
+        )
+        result = registry.execute(
+            "send_to_allowed_person",
+            {"person": "Amelie", "message": "Dinner?"},
+            namespace="whatsapp",
+            reply_to="opaque-internal-id",
+            service_available=True,
+            relay_authorized_person="Amelie",
+            relay_request_id="wa:request",
+        )
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(sends, [("wa:request", "opaque-internal-id", "Amelie", "Dinner?")])
+        summary = registry.invocations[-1]["argument_summary"]
+        self.assertEqual(summary, {"person": "Amelie", "message_length": 7})
+        self.assertNotIn("Dinner", json.dumps(registry.invocations[-1]))
+        with self.assertRaises(PermissionError):
+            registry.execute(
+                "send_to_allowed_person", {"person": "Amelie", "message": "Dinner?"},
+                namespace="whatsapp", reply_to="opaque-internal-id",
+                relay_authorized_person=None, relay_request_id="wa:request-2",
+            )
+        with self.assertRaises(PermissionError):
+            registry.execute(
+                "send_to_allowed_person", {"person": "+491701234567", "message": "test"},
+                namespace="whatsapp", reply_to="opaque-internal-id",
+                relay_authorized_person="+491701234567", relay_request_id="wa:request-3",
+            )
 
     def test_operational_capabilities_have_no_shell_or_arbitrary_command_argument(self):
         bindings = []

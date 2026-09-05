@@ -79,11 +79,26 @@ WHATSAPP_NAMESPACE: dict[str, Any] = {
     "type": "namespace",
     "name": "whatsapp",
     "description": "Policy-gated WhatsApp output capability. Tool calls only propose output; the runtime actuator remains authoritative.",
-    "tools": [{
-        "type": "function", "name": "send", "strict": True,
-        "description": "Logical capability whatsapp.send. Propose a reply; trusted runtime policy performs any real send after cognition.",
-        "parameters": _object({"text": {"type": "string"}}, ["text"]),
-    }],
+    "tools": [
+        {
+            "type": "function", "name": "send", "strict": True,
+            "description": "Logical capability whatsapp.send. Propose a reply; trusted runtime policy performs any real send after cognition.",
+            "parameters": _object({"text": {"type": "string"}}, ["text"]),
+        },
+        {
+            "type": "function", "name": "send_to_allowed_person", "strict": True,
+            "description": (
+                "Logical capability whatsapp.send_to_allowed_person. Relay a message only when the current admitted "
+                "WhatsApp sender explicitly asked KAIROS to contact the named other person. Recipient resolution, "
+                "sender attribution, service-window enforcement, idempotency, and delivery are performed by trusted "
+                "code. Never use a phone number or call this for unsolicited outreach."
+            ),
+            "parameters": _object({
+                "person": {"type": "string", "enum": ["Roberto", "Amelie"]},
+                "message": {"type": "string", "minLength": 1, "maxLength": 2000},
+            }, ["person", "message"]),
+        },
+    ],
 }
 
 RESEARCH_NAMESPACE: dict[str, Any] = {
@@ -205,12 +220,18 @@ class SealedResearchToolRegistry:
     ckk: CKKKnowledgeClient
     audit_sink: Callable[[dict[str, Any]], None] = lambda event: None
     job_binding_sink: Callable[[str, str], None] = lambda job_id, recipient: None
+    relay_sender: Callable[[str, str, str, str], dict[str, Any]] = (
+        lambda request_id, requester, person, message: (_ for _ in ()).throw(
+            RuntimeError("sealed WhatsApp relay is unavailable")
+        )
+    )
     invocations: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def capabilities(self) -> tuple[str, ...]:
         return (
-            "whatsapp.send", "ckk.search", "ckk.read", "ckk.symbol", "ckk.run", "research.publish",
+            "whatsapp.send", "whatsapp.send_to_allowed_person",
+            "ckk.search", "ckk.read", "ckk.symbol", "ckk.run", "research.publish",
             "repo.read", "process.run", "process.status", "process.stop", "file.read", "file.hash",
             "system.metrics",
         )
@@ -230,7 +251,9 @@ class SealedResearchToolRegistry:
     def logical_name(name: str, namespace: str | None = None) -> str:
         aliases = {
             "ckk_search": "ckk.search", "ckk_read": "ckk.read", "ckk_symbol": "ckk.symbol", "ckk_run": "ckk.run",
-            "whatsapp_send": "whatsapp.send", "research_publish": "research.publish",
+            "whatsapp_send": "whatsapp.send",
+            "whatsapp_send_to_allowed_person": "whatsapp.send_to_allowed_person",
+            "research_publish": "research.publish",
             "repo_read": "repo.read", "process_run": "process.run", "process_status": "process.status",
             "process_stop": "process.stop", "file_read": "file.read", "file_hash": "file.hash",
             "system_metrics": "system.metrics",
@@ -263,6 +286,8 @@ class SealedResearchToolRegistry:
         namespace: str | None = None,
         reply_to: str | None = None,
         service_available: bool = False,
+        relay_authorized_person: str | None = None,
+        relay_request_id: str | None = None,
     ) -> dict[str, Any]:
         logical = self.logical_name(name, namespace)
         started_monotonic = time.monotonic()
@@ -326,6 +351,18 @@ class SealedResearchToolRegistry:
                 result = self.ckk.experiment_file_hash(arguments["path"])
             elif logical == "system.metrics":
                 result = self.ckk.experiment_system_metrics(arguments.get("job_id"))
+            elif logical == "whatsapp.send_to_allowed_person":
+                person = str(arguments.get("person", ""))
+                message = str(arguments.get("message", "")).strip()
+                if not reply_to or not relay_request_id:
+                    raise PermissionError("relay requires a direct admitted WhatsApp request")
+                if relay_authorized_person != person:
+                    raise PermissionError("relay target was not explicitly authorized by the current message")
+                if person not in {"Roberto", "Amelie"}:
+                    raise PermissionError("relay recipient is not in the sealed contact allowlist")
+                if not message or len(message) > 2000:
+                    raise ValueError("relay message is empty or exceeds 2000 characters")
+                result = self.relay_sender(relay_request_id, reply_to, person, message)
             elif logical == "whatsapp.send":
                 if not reply_to or not service_available:
                     raise PermissionError("whatsapp.send unavailable outside an admitted service window")
@@ -371,6 +408,10 @@ class SealedResearchToolRegistry:
                 result.get("result_sha256") or job.get("result_sha256")
                 or result.get("sha256") or result.get("content_sha256")
             ),
+            "requesting_participant": result.get("requesting_participant"),
+            "intended_recipient": result.get("intended_recipient"),
+            "provider_http_status": result.get("provider_http_status"),
+            "provider_message_id": result.get("provider_message_id"),
             "latency_ms": round((time.monotonic() - started_monotonic) * 1000, 3),
             "belief_status": "not_committed",
         }
@@ -414,6 +455,11 @@ class SealedResearchToolRegistry:
             }
         if logical == "file.hash":
             return {"path": str(arguments.get("path", ""))[:800]}
+        if logical == "whatsapp.send_to_allowed_person":
+            return {
+                "person": arguments.get("person"),
+                "message_length": len(str(arguments.get("message", ""))),
+            }
         return {"text_length": len(str(arguments.get("text", "")))}
 
     @staticmethod

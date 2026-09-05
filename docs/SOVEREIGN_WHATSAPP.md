@@ -12,6 +12,8 @@
   every other sense.
 - Learning changes committed memory and hysteretic preferences, not executable
   capabilities or grammar.
+- Roberto and Amelie may explicitly ask KAIROS to relay a message to the other
+  participant through the sealed `whatsapp.send_to_allowed_person` capability.
 
 ## Platform boundary
 
@@ -36,6 +38,21 @@ Roberto to reopen the conversation.
 - a proactive daily budget,
 - a policy-complete simulation actuator and a live Cloud API actuator that
   records Meta's HTTP status and response body in the durable episode.
+
+The relay contact book is fixed trusted configuration: `Roberto` resolves to
+the owner ID and `Amelie` resolves to the sole additional admitted ID. The
+model receives only those two names, never the underlying WhatsApp IDs. A
+conservative non-model gate requires a direct inbound text containing a relay
+verb and the other participant's name. Raw-number and third-party targets,
+self-relays, clock/status-triggered outreach, and chat-based allowlist changes
+are rejected. The target must also have an open Meta service window.
+
+Every inbound event can produce at most one relay. A durable reservation is
+written before the Graph API call, so a cognition retry cannot duplicate an
+accepted or uncertain send. The relay audit stores participant labels,
+timestamps, provider status, Meta message ID, and later delivery state, but no
+message content or phone identifier. The sender receives a separate direct
+confirmation only after Meta accepts the relay.
 
 Document bytes are not trusted merely because their metadata arrived in a
 signed webhook. The media ID is admitted first; a later fetcher must download,

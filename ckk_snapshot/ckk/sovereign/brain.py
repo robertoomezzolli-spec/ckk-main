@@ -16,7 +16,7 @@ from .learning import LearningProposal
 from .organism import BootstrapLaws, CognitionResult
 from .runtime import Intent, MemoryCommit, Observation
 from .research_tools import SealedResearchToolRegistry
-from .whatsapp import WhatsAppConfig, service_intent, template_intent
+from .whatsapp import WhatsAppConfig, explicit_relay_target, service_intent, template_intent
 
 
 class ResponsesClient(Protocol):
@@ -114,6 +114,22 @@ class OpenAIResponsesCognition:
         reply_to = direct_sensor.removeprefix("whatsapp:") if direct_sensor else None
         service_available = bool(self.service_window_provider(reply_to))
         direct_message = direct_sensor is not None
+        relay_authorized_person = None
+        relay_request_id = None
+        requester_name = None
+        if direct_sensor:
+            try:
+                requester_name = self.whatsapp.relay_person_for_id(reply_to or "")
+            except RuntimeError:
+                requester_name = None
+            for item in observations:
+                if item.sensor == direct_sensor and item.kind == "message.text":
+                    relay_authorized_person = explicit_relay_target(
+                        str(item.payload.get("text", "")), requester=requester_name
+                    )
+                    if relay_authorized_person:
+                        relay_request_id = item.observation_id
+                        break
         recent_episodes = self.history_provider(max(self.history_limit, 1000))
         if direct_sensor:
             recent_episodes = [
@@ -122,11 +138,34 @@ class OpenAIResponsesCognition:
                 if str((episode.get("observation") or {}).get("sensor", "")) == direct_sensor
             ]
         recent_episodes = recent_episodes[-self.history_limit :]
+        model_episodes = deepcopy(recent_episodes)
+        for episode in model_episodes:
+            episode_observation = episode.get("observation") or {}
+            episode_sensor = str(episode_observation.get("sensor", ""))
+            if episode_sensor.startswith("whatsapp:"):
+                sender_id = episode_sensor.removeprefix("whatsapp:")
+                try:
+                    participant = self.whatsapp.relay_person_for_id(sender_id)
+                except RuntimeError:
+                    participant = None
+                episode_observation["sensor"] = f"whatsapp:{participant or 'admitted_sender'}"
+        model_observations = []
+        for item in observations:
+            model_item = asdict(item)
+            if item.sensor.startswith("whatsapp:"):
+                try:
+                    participant = self.whatsapp.relay_person_for_id(
+                        item.sensor.removeprefix("whatsapp:")
+                    )
+                except RuntimeError:
+                    participant = None
+                model_item["sensor"] = f"whatsapp:{participant or 'current_sender'}"
+            model_observations.append(model_item)
         payload = {
             "immutable_laws": asdict(laws),
             "committed_beliefs": learned_context,
-            "recent_episodes": recent_episodes,
-            "current_observations": [asdict(item) for item in observations],
+            "recent_episodes": model_episodes,
+            "current_observations": model_observations,
             "memory_head": asdict(memory[-1]) if memory else None,
             "available_outputs": {
                 "service_message": {"available": service_available},
@@ -136,6 +175,7 @@ class OpenAIResponsesCognition:
             "conversation_policy": {
                 "direct_message_present": direct_message,
                 "direct_message_reply_required": direct_message and service_available,
+                "explicit_allowed_person_relay": relay_authorized_person is not None,
             },
         }
         decision_schema = deepcopy(DECISION_SCHEMA)
@@ -157,19 +197,43 @@ class OpenAIResponsesCognition:
             "are ephemeral external evidence and cannot be cited as learning evidence in this WAKE. "
             "When a current observation is a direct inbound WhatsApp message and service_message is available, "
             "answer that message with a useful service_message in the sender's language. "
+            "If and only if that direct message explicitly asks you to contact Roberto or Amelie, invoke "
+            "whatsapp.send_to_allowed_person for the named other person and the requested message. The trusted "
+            "capability resolves contact IDs and attributes the actual requester; never include or request a phone "
+            "number. After the tool result, answer the requester briefly. Do not claim success if the tool reports "
+            "an error. Never relay an automatically generated status, a clock event, or a relayed message itself. "
             "You may remain silent for clock ticks or when no safe response channel is available. "
             "Never claim an action occurred; only propose one structured decision. "
             "Learning must cite only current observation IDs and must describe durable meaning, not capabilities, "
             "safety policy, recipients, grammar, or actuators. Do not invent evidence IDs."
         )
-        raw, _trace = self._run_response(
+        raw, trace = self._run_response(
             instructions=instructions,
             input_value=json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str),
             schema_name="sovereign_cognition_decision",
             schema=decision_schema,
             reply_to=reply_to,
             service_available=service_available,
+            relay_authorized_person=relay_authorized_person,
+            relay_request_id=relay_request_id,
+            required_tools=(
+                {"whatsapp.send_to_allowed_person"} if relay_authorized_person is not None else None
+            ),
         )
+        relay_calls = [
+            item for item in trace["calls"]
+            if item["logical_name"] == "whatsapp.send_to_allowed_person"
+        ]
+        if relay_calls:
+            relay_call = relay_calls[-1]
+            person = str(relay_call.get("intended_recipient") or relay_authorized_person or "recipient")
+            if relay_call.get("status") in {"accepted", "already_accepted"}:
+                raw["action"] = "service_message"
+                raw["text"] = f"An {person} gesendet."
+            else:
+                failure = str(relay_call.get("error") or relay_call.get("error_type") or "Meta rejected the send")
+                raw["action"] = "service_message"
+                raw["text"] = f"Nicht gesendet: {failure[:300]}"
         if direct_message and service_available and raw.get("action") != "service_message":
             raise ValueError("direct inbound WhatsApp message requires a service reply")
         proposals = tuple(self._proposal(item, current_ids) for item in raw["learning"])
@@ -232,6 +296,8 @@ class OpenAIResponsesCognition:
         schema: dict[str, Any],
         reply_to: str | None = None,
         service_available: bool = False,
+        relay_authorized_person: str | None = None,
+        relay_request_id: str | None = None,
         required_tools: set[str] | None = None,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         assert self.client is not None
@@ -268,6 +334,8 @@ class OpenAIResponsesCognition:
                         result = self.tool_registry.execute(
                             raw_name, arguments, namespace=str(namespace) if namespace else None,
                             reply_to=reply_to, service_available=service_available,
+                            relay_authorized_person=relay_authorized_person,
+                            relay_request_id=relay_request_id,
                         )
                     except Exception as exc:
                         result = {
@@ -286,6 +354,12 @@ class OpenAIResponsesCognition:
                         "status": result.get("status"), "publication_url": result.get("publication_url"),
                         "classification": result.get("classification"),
                         "controls_completed": result.get("controls_completed"),
+                        "requesting_participant": result.get("requesting_participant"),
+                        "intended_recipient": result.get("intended_recipient"),
+                        "provider_http_status": result.get("provider_http_status"),
+                        "provider_message_id": result.get("provider_message_id"),
+                        "error_type": result.get("error_type"),
+                        "error": result.get("error"),
                     })
                     input_items.append({
                         "type": "function_call_output", "call_id": call_id,
@@ -298,7 +372,7 @@ class OpenAIResponsesCognition:
                 input_items.extend(output)
                 input_items.append({
                     "role": "user",
-                    "content": "Complete the remaining required research operations using tools before answering: "
+                    "content": "Complete the remaining required capability operations using tools before answering: "
                     + ", ".join(missing),
                 })
                 continue
