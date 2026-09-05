@@ -1,107 +1,208 @@
 #!/usr/bin/env python3
-"""Blind future-cone accessibility gate.
+"""Blind complete-future-cone accessibility gate over frozen CKK grammar.
 
-Read-only with respect to the CKK kernel. Reuses the frozen structural generator,
-but replaces one-step out-degree with the complete distinct reachable future cone.
-No physics, pi, gravity, spacetime, Lorentz, mass, energy, or time variable.
+Kernel is imported read-only. No physics, pi, gravity, spacetime, Lorentz,
+mass, energy, metric, curvature, or external time variable is supplied.
 """
 from __future__ import annotations
-import json, math, statistics
+
+import json
+import math
+import sys
 from collections import defaultdict, deque
 from pathlib import Path
 
-# Reuse the already-audited graph construction from V2 rather than modifying kernel code.
-import possibility_distance_gate as base
+ROOT = Path(__file__).resolve().parents[1]
+GEN = ROOT / "ckk_snapshot" / "ckk" / "gen"
+sys.path.insert(0, str(GEN))
+
+import grammar as G  # noqa: E402
+from expand import expand_structural_auditable  # noqa: E402
+
+OUT = ROOT / "results" / "future_cone_gate.json"
+LEVELS = 4
+CAP = 30000
 
 
 def rankdata(xs):
-    order=sorted(range(len(xs)), key=lambda i: xs[i]); r=[0.0]*len(xs); i=0
-    while i<len(order):
-        j=i
-        while j+1<len(order) and xs[order[j+1]]==xs[order[i]]: j+=1
-        avg=(i+j+2)/2.0
-        for k in range(i,j+1): r[order[k]]=avg
-        i=j+1
-    return r
+    order = sorted(range(len(xs)), key=lambda i: xs[i])
+    ranks = [0.0] * len(xs)
+    i = 0
+    while i < len(order):
+        j = i + 1
+        while j < len(order) and xs[order[j]] == xs[order[i]]:
+            j += 1
+        r = (i + 1 + j) / 2.0
+        for k in range(i, j):
+            ranks[order[k]] = r
+        i = j
+    return ranks
 
-def spearman(x,y):
-    if len(x)<3:return None
-    rx,ry=rankdata(x),rankdata(y); mx,my=statistics.mean(rx),statistics.mean(ry)
-    num=sum((a-mx)*(b-my) for a,b in zip(rx,ry)); den=math.sqrt(sum((a-mx)**2 for a in rx)*sum((b-my)**2 for b in ry))
-    return num/den if den else None
 
-def reachable_count(start, succ):
-    seen=set(); q=list(succ.get(start,()))
-    while q:
-        v=q.pop()
-        if v==start or v in seen: continue
-        seen.add(v); q.extend(succ.get(v,()))
+def pearson(x, y):
+    if len(x) < 3:
+        return None
+    mx, my = sum(x) / len(x), sum(y) / len(y)
+    vx = sum((a - mx) ** 2 for a in x)
+    vy = sum((b - my) ** 2 for b in y)
+    if vx == 0 or vy == 0:
+        return None
+    return sum((a - mx) * (b - my) for a, b in zip(x, y)) / math.sqrt(vx * vy)
+
+
+def spearman(x, y):
+    return pearson(rankdata(x), rankdata(y))
+
+
+def future_cone_size(start, adj):
+    """Distinct transitive successors. Confluence is counted once."""
+    seen = set()
+    stack = list(adj.get(start, ()))
+    while stack:
+        v = stack.pop()
+        if v == start or v in seen:
+            continue
+        seen.add(v)
+        stack.extend(adj.get(v, ()))
     return len(seen)
 
+
 def main():
-    # V2 exposes build_graph() returning states/events/level metadata; fail loudly if contract changed.
-    built=base.build_graph()
-    if isinstance(built, dict):
-        states=built['states']; events=built['events']; levels=built.get('levels',{})
-    else:
-        states,events,levels=built
-    def sid(s):
-        if isinstance(s,str): return s
-        for k in ('id','state_id','uid','hash'): 
-            if isinstance(s,dict) and k in s:return str(s[k])
-            if hasattr(s,k):return str(getattr(s,k))
-        return str(s)
-    smap={sid(s):s for s in states}
-    def kind(s):
-        if isinstance(s,dict): return str(s.get('kind',''))
-        return str(getattr(s,'kind',''))
-    def endpoints(e):
-        if isinstance(e,dict):
-            a=e.get('source') or e.get('source_id') or e.get('src'); b=e.get('target') or e.get('target_id') or e.get('dst')
-        else:
-            a=getattr(e,'source',getattr(e,'source_id',None)); b=getattr(e,'target',getattr(e,'target_id',None))
-        return sid(a),sid(b)
-    succ=defaultdict(set); pred=defaultdict(set)
-    for e in events:
-        a,b=endpoints(e)
-        if a in smap and b in smap and a!=b: succ[a].add(b); pred[b].add(a)
-    boundaries={i for i,s in smap.items() if kind(s)=='BOUNDARY'}
-    # graph distance to an endogenous boundary, reverse BFS
-    dist={b:0 for b in boundaries}; q=deque(boundaries)
+    pool, derivations = expand_structural_auditable(levels=LEVELS, cap=CAP)
+    states = {s.structural_sig(): s for s in pool.values()}
+
+    adj = defaultdict(set)
+    rev = defaultdict(set)
+    first_seen = {s.structural_sig(): 0 for s in G.SEEDS if s.structural_sig() in states}
+    for d in derivations:
+        if d.output not in states:
+            continue
+        first_seen[d.output] = min(first_seen.get(d.output, d.level), d.level)
+        for inp in d.inputs:
+            if inp in states and inp != d.output:
+                adj[inp].add(d.output)
+                rev[d.output].add(inp)
+
+    boundaries = {k for k, s in states.items() if s.kind == G.BOUNDARY}
+
+    dist = {}
+    q = deque(boundaries)
+    for b in boundaries:
+        dist[b] = 0
     while q:
-        v=q.popleft()
-        for p in pred.get(v,()):
-            if p not in dist: dist[p]=dist[v]+1; q.append(p)
-    cone={v:reachable_count(v,succ) for v in smap}
-    # frontier guard: if level metadata is unavailable, exclude nodes with no generated successors,
-    # since finite truncation makes their cone unknowable rather than zero.
-    eligible={v for v in dist if succ.get(v)}
-    approach=[]; other=[]
-    for a in eligible:
-        for b in succ.get(a,()):
-            if b not in eligible: continue
-            rec=(cone[a],cone[b])
-            if dist.get(b)==dist[a]-1: approach.append(rec)
-            else: other.append(rec)
-    def frac_nonincrease(rows): return sum(b<=a for a,b in rows)/len(rows) if rows else None
-    def frac_strict(rows): return sum(b<a for a,b in rows)/len(rows) if rows else None
-    ap=frac_nonincrease(approach); ot=frac_nonincrease(other)
-    ds=[dist[v] for v in eligible]; cs=[cone[v] for v in eligible]
-    result={
-      'schema':'ckk.external.future-cone-gate.v1','kernel_modified':False,
-      'frozen_definitions':{
-        'future_cone':'F(v)=number of distinct states reachable from v by one or more generated derivation edges; confluence counted once',
-        'approach':'edge lowering shortest graph distance to endogenous BOUNDARY by one',
-        'operational_distance':'monotone inverse of F only as an external diagnostic; no physical law assumed'},
-      'generator':{'states':len(smap),'events':len(events),'endogenous_boundaries':len(boundaries),'eligible':len(eligible)},
-      'tests':{'approach_edges':len(approach),'other_edges':len(other),'approach_future_cone_nonincrease_fraction':ap,'approach_future_cone_strict_decrease_fraction':frac_strict(approach),'other_future_cone_nonincrease_fraction':ot,'approach_vs_other_contrast':None if ap is None or ot is None else ap-ot,'spearman_boundary_distance_vs_future_cone':spearman(ds,cs),'min_future_cone_eligible':min(cs) if cs else None,'max_future_cone_eligible':max(cs) if cs else None},
+        v = q.popleft()
+        for u in rev.get(v, ()):
+            nd = dist[v] + 1
+            if u not in dist or nd < dist[u]:
+                dist[u] = nd
+                q.append(u)
+
+    # Same frontier guard as the already-audited V2 gate.
+    eligible = {
+        n for n in states
+        if n in dist and first_seen.get(n, LEVELS) <= LEVELS - 1
     }
-    contrast=result['tests']['approach_vs_other_contrast']
-    rho=result['tests']['spearman_boundary_distance_vs_future_cone']
-    # Positive only if boundary approach narrows the complete future cone more than controls and global distance agrees.
-    positive=(contrast is not None and contrast>0 and rho is not None and rho>0)
-    result['status']='BOUNDARY_SPECIFIC_FUTURE_CONE_RATCHET' if positive else 'FUTURE_CONE_PRESENT_NO_BOUNDARY_SPECIFIC_RATCHET'
-    result['interpretation']='Structural blind test only; a positive result is not a derivation of gravity, geometry, or physics.'
-    Path('results').mkdir(exist_ok=True); Path('results/future_cone_gate.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
-    print(json.dumps(result,indent=2,sort_keys=True))
-if __name__=='__main__': main()
+
+    # Complete remaining possibility space, not local out-degree.
+    cone = {n: future_cone_size(n, adj) for n in eligible}
+
+    approach = []
+    other = []
+    for s in eligible:
+        for t in adj.get(s, ()):
+            if t not in eligible:
+                continue
+            rec = (s, t)
+            if dist[t] == dist[s] - 1:
+                approach.append(rec)
+            else:
+                other.append(rec)
+
+    def nonincrease(rows):
+        return sum(1 for s, t in rows if cone[t] <= cone[s]) / len(rows) if rows else None
+
+    def strict_decrease(rows):
+        return sum(1 for s, t in rows if cone[t] < cone[s]) / len(rows) if rows else None
+
+    app_noninc = nonincrease(approach)
+    app_strict = strict_decrease(approach)
+    other_noninc = nonincrease(other)
+    contrast = (
+        app_noninc - other_noninc
+        if app_noninc is not None and other_noninc is not None else None
+    )
+
+    nodes = sorted(eligible)
+    dvals = [dist[n] for n in nodes]
+    fvals = [cone[n] for n in nodes]
+    rho = spearman(dvals, fvals) if nodes else None
+
+    # Descriptive distance bins are frozen before status assignment.
+    profile = {}
+    for d in sorted(set(dvals)):
+        vals = [cone[n] for n in nodes if dist[n] == d]
+        profile[str(d)] = {
+            "states": len(vals),
+            "mean_future_cone": sum(vals) / len(vals),
+            "min_future_cone": min(vals),
+            "max_future_cone": max(vals),
+        }
+
+    enough = len(eligible) >= 20 and len(boundaries) > 0 and len(approach) >= 20
+    # Boundary-specific signal must beat the control, not merely narrow generically.
+    discriminates = bool(contrast is not None and contrast >= 0.10)
+    directional = bool(rho is not None and rho > 0)
+    ratchet = bool(enough and app_noninc is not None and app_noninc >= 0.75 and app_strict is not None and app_strict >= 0.25)
+
+    if ratchet and discriminates and directional:
+        status = "BOUNDARY_SPECIFIC_FUTURE_CONE_RATCHET"
+    elif enough:
+        status = "FUTURE_CONE_PRESENT_NO_BOUNDARY_SPECIFIC_RATCHET"
+    else:
+        status = "INSUFFICIENT_GENERATED_PROVENANCE"
+
+    result = {
+        "schema": "ckk.external.future-cone-gate.v2",
+        "status": status,
+        "kernel_modified": False,
+        "generator": {
+            "function": "expand_structural_auditable",
+            "levels": LEVELS,
+            "cap": CAP,
+            "states": len(states),
+            "derivation_events": len(derivations),
+            "endogenous_boundary_states": len(boundaries),
+            "eligible_nonfrontier_states_reaching_boundary": len(eligible),
+        },
+        "frozen_definitions": {
+            "boundary": "CKK state with kind == BOUNDARY; never finite-run terminal",
+            "future_cone": "F(v)=count of all distinct generated states transitively reachable from v; confluence counted once",
+            "approach": "directed edge lowering shortest graph distance to endogenous BOUNDARY by one",
+            "frontier_guard": "states first generated in final expansion level are excluded",
+            "operational_distance": "only monotone inverse intuition; no metric or physical law inserted",
+        },
+        "tests": {
+            "approach_edges": len(approach),
+            "other_edges": len(other),
+            "approach_future_cone_nonincrease_fraction": app_noninc,
+            "approach_future_cone_strict_decrease_fraction": app_strict,
+            "other_future_cone_nonincrease_fraction": other_noninc,
+            "approach_vs_other_contrast": contrast,
+            "spearman_boundary_distance_vs_future_cone": rho,
+            "boundary_ratchet": ratchet,
+            "approach_specific_discrimination": discriminates,
+            "directional_distance_relation": directional,
+            "min_future_cone_eligible": min(fvals) if fvals else None,
+            "max_future_cone_eligible": max(fvals) if fvals else None,
+        },
+        "distance_profile": profile,
+        "interpretation": "Structural blind CKK test only. A positive result identifies a boundary-specific narrowing of the complete generated future possibility cone; it does not by itself derive geometry, gravity, or any physical force law.",
+    }
+
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    print(json.dumps(result, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
