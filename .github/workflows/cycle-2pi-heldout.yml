@@ -1,0 +1,24 @@
+name: CKK held-out CYCLE audit
+on:
+  push:
+    branches: [ experiment/solar-system-provenance-cascade ]
+    paths:
+      - 'experiments/cycle_2pi_heldout.py'
+      - 'experiments/cycle_2pi_heldout_targets.json'
+      - '.github/workflows/cycle-2pi-heldout.yml'
+  workflow_dispatch:
+jobs:
+  heldout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Run adversarial held-out
+        run: python experiments/cycle_2pi_heldout.py
+      - name: Show result
+        run: cat results/cycle_2pi_blind/heldout_external.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cycle-2pi-heldout
+          path: results/cycle_2pi_blind/heldout_external.json
