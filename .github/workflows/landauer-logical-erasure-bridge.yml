@@ -1,0 +1,30 @@
+name: landauer-logical-erasure-bridge
+
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+    paths:
+      - experiments/landauer_logical_erasure_bridge_gate.py
+      - .github/workflows/landauer-logical-erasure-bridge.yml
+      - ckk_snapshot/ckk/gen/grammar.py
+      - ckk_snapshot/ckk/gen/expand.py
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run blind logical erasure Landauer bridge gate
+        run: python experiments/landauer_logical_erasure_bridge_gate.py
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: landauer-logical-erasure-bridge-result
+          path: results/landauer_logical_erasure_bridge_gate.json
+          if-no-files-found: error
