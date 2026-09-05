@@ -1,0 +1,25 @@
+name: context-measure-gate
+on:
+  workflow_dispatch:
+  push:
+    branches: [experiment/solar-system-provenance-cascade]
+    paths:
+      - 'experiments/context_measure_gate.py'
+      - '.github/workflows/context-measure-gate.yml'
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run blind context-measure gate
+        working-directory: experiments
+        run: python context_measure_gate.py
+      - name: Show result
+        run: cat results/context_measure_gate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: context-measure-gate-result
+          path: results/context_measure_gate.json
