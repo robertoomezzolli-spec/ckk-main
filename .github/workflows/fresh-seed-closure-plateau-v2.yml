@@ -1,5 +1,7 @@
 name: fresh-seed-closure-plateau-v2
 
+# Scientific thresholds are frozen in experiments/PREREG_FRESH_SEED_CLOSURE_PLATEAU_V2.md.
+# This workflow-only commit exists solely to start the first valid post-freeze V2 run.
 on:
   push:
     branches:
