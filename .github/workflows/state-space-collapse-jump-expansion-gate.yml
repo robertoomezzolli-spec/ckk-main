@@ -1,0 +1,30 @@
+name: state-space-collapse-jump-expansion-gate
+
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+    paths:
+      - experiments/state_space_collapse_jump_expansion_gate.py
+      - .github/workflows/state-space-collapse-jump-expansion-gate.yml
+      - ckk_snapshot/ckk/gen/grammar.py
+      - ckk_snapshot/ckk/gen/expand.py
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run blind collapse jump re-expansion gate
+        run: python experiments/state_space_collapse_jump_expansion_gate.py
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-space-collapse-jump-expansion-result
+          path: results/state_space_collapse_jump_expansion_gate.json
+          if-no-files-found: error
