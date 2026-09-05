@@ -1,0 +1,18 @@
+name: real-closure-residual-gate
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run real closure residual gate
+        run: python experiments/real_closure_residual_gate.py
+      - name: Show result
+        run: cat results/real_closure_residual_gate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: real-closure-residual-gate-result
+          path: results/real_closure_residual_gate.json
