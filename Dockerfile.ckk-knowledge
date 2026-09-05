@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r requirements-knowledge.txt
 COPY ckk_snapshot/ckk/knowledge_adapter ./ckk_snapshot/ckk/knowledge_adapter
-RUN mkdir -p /cache && useradd --system --uid 10003 knowledge && chown -R knowledge:knowledge /cache
+RUN mkdir -p /cache /jobs /artifacts && useradd --system --uid 10003 knowledge && \
+    chown -R knowledge:knowledge /cache /jobs /artifacts
 
 USER knowledge
 EXPOSE 8070

@@ -6,6 +6,7 @@ from dataclasses import asdict
 import json
 import sqlite3
 import threading
+import time
 from typing import Any
 
 from .learning import Belief
@@ -53,6 +54,19 @@ class SQLiteStateStore:
                     source_kind TEXT NOT NULL,
                     evidence_labels_json TEXT NOT NULL,
                     content_sha256 TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS tool_invocations (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                    occurred_at INTEGER NOT NULL,
+                    logical_name TEXT NOT NULL,
+                    arguments_sha256 TEXT NOT NULL,
+                    result_sha256 TEXT NOT NULL,
+                    repository TEXT,
+                    commit_sha TEXT,
+                    run_id TEXT,
+                    operator_names_json TEXT NOT NULL,
+                    latency_ms REAL NOT NULL,
+                    belief_status TEXT NOT NULL
                 );
                 """
             )
@@ -140,6 +154,24 @@ class SQLiteStateStore:
         with self._lock:
             row = self._db.execute("SELECT COUNT(*) FROM external_evidence").fetchone()
         return int(row[0])
+
+    def record_tool_invocation(self, event: dict[str, Any]) -> None:
+        """Persist hashes and provenance only, never retrieved text or tool arguments."""
+        with self._lock, self._db:
+            self._db.execute(
+                "INSERT INTO tool_invocations(occurred_at,logical_name,arguments_sha256,result_sha256,repository,"
+                "commit_sha,run_id,operator_names_json,latency_ms,belief_status) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    int(time.time()), str(event["logical_name"]), str(event["arguments_sha256"]),
+                    str(event["result_sha256"]), event.get("repository"), event.get("commit_sha"),
+                    event.get("run_id"), json.dumps(event.get("operator_names") or [], sort_keys=True),
+                    float(event.get("latency_ms") or 0), str(event.get("belief_status") or "not_committed"),
+                ),
+            )
+
+    def tool_invocation_count(self) -> int:
+        with self._lock:
+            return int(self._db.execute("SELECT COUNT(*) FROM tool_invocations").fetchone()[0])
 
     def communication_state(self) -> tuple[dict[str, int], list[int]]:
         """Recover service-window and proactive budget state after restart."""

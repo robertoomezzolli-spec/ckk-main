@@ -8,12 +8,13 @@ import hmac
 import os
 from pathlib import Path
 import time
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from .index import CKKIndex, GitMirror
+from .run_queue import CKKRunQueue
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,7 @@ class AdapterSettings:
     cache_directory: str
     access_token: str
     refresh_seconds: int = 900
+    run_queue_directory: str = "/jobs"
 
     @classmethod
     def from_env(cls) -> "AdapterSettings":
@@ -35,6 +37,7 @@ class AdapterSettings:
             cache_directory=os.getenv("CKK_CACHE_DIRECTORY", "/cache"),
             access_token=token,
             refresh_seconds=max(60, int(os.getenv("CKK_REFRESH_SECONDS", "900"))),
+            run_queue_directory=os.getenv("CKK_RUN_QUEUE_DIRECTORY", "/jobs"),
         )
 
 
@@ -54,13 +57,36 @@ class DiffRequest(BaseModel):
     target_ref: str = Field(min_length=1, max_length=200)
 
 
-def create_app(settings: AdapterSettings | None = None, index: CKKIndex | None = None) -> FastAPI:
+class ReadRequest(BaseModel):
+    path: str = Field(min_length=1, max_length=500)
+    ref: str | None = Field(default=None, max_length=200)
+
+
+class SymbolRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=128)
+    limit: int = Field(default=8, ge=1, le=20)
+
+
+class RunRequest(BaseModel):
+    seed: str = Field(min_length=1, max_length=128)
+    operators: list[str] = Field(default_factory=list, max_length=16)
+    controls: list[str] = Field(default_factory=lambda: ["structural_identity"], max_length=8)
+    budgets: dict[str, Any] = Field(default_factory=dict)
+    ref: str | None = Field(default=None, max_length=200)
+
+
+def create_app(
+    settings: AdapterSettings | None = None,
+    index: CKKIndex | None = None,
+    run_queue: CKKRunQueue | None = None,
+) -> FastAPI:
     settings = settings or AdapterSettings.from_env()
     cache = Path(settings.cache_directory)
     index = index or CKKIndex(
         GitMirror(settings.repository_url, cache / "repository.git", settings.repository_ref),
         cache / "index.sqlite3",
     )
+    run_queue = run_queue or CKKRunQueue(index.mirror, settings.run_queue_directory)
     app = FastAPI(title="CKK Knowledge Adapter", docs_url=None, redoc_url=None, openapi_url=None)
     stop = asyncio.Event()
     state = {"last_refresh_error": None, "last_refresh_attempt": None}
@@ -108,6 +134,8 @@ def create_app(settings: AdapterSettings | None = None, index: CKKIndex | None =
             "read_only_source": True,
             "last_refresh_attempt": state["last_refresh_attempt"],
             "last_refresh_error": state["last_refresh_error"],
+            "runner_isolation": "network_mode_none",
+            "runner_queue_configured": bool(settings.run_queue_directory),
         }
 
     @app.post("/v1/search")
@@ -129,5 +157,33 @@ def create_app(settings: AdapterSettings | None = None, index: CKKIndex | None =
     async def diff(request: DiffRequest, authorization: str = Header(default="")):
         authorize(authorization)
         return await asyncio.to_thread(index.diff, request.base_ref, request.target_ref)
+
+    @app.post("/v1/read")
+    async def read(request: ReadRequest, authorization: str = Header(default="")):
+        authorize(authorization)
+        try:
+            return await asyncio.to_thread(index.mirror.read_path, request.path, request.ref)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="repository path not found") from exc
+
+    @app.post("/v1/symbol")
+    async def symbol(request: SymbolRequest, authorization: str = Header(default="")):
+        authorize(authorization)
+        return await asyncio.to_thread(index.symbol, request.name, request.limit)
+
+    @app.post("/v1/run")
+    async def run(request: RunRequest, authorization: str = Header(default="")):
+        authorize(authorization)
+        result = await asyncio.to_thread(
+            run_queue.run, request.seed, request.operators, request.controls, request.budgets, request.ref
+        )
+        if result.get("status") != "completed":
+            raise HTTPException(status_code=422, detail={
+                "error_type": result.get("error_type", "RunnerError"),
+                "error": result.get("error", "sealed runner failed"),
+                "run_id": result.get("run_id"),
+                "commit_sha": result.get("commit_sha"),
+            })
+        return result
 
     return app

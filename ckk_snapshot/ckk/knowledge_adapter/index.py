@@ -157,6 +157,56 @@ class GitMirror:
             raise RuntimeError("unable to read Git blob")
         return result.stdout
 
+    def read_path(self, path: str, ref: str | None = None, maximum_chars: int = 24000) -> dict[str, Any]:
+        """Read one repository blob at an explicit, resolved commit.
+
+        The path is resolved through Git's tree rather than the host filesystem,
+        so callers cannot escape the CKK repository or follow working-tree links.
+        """
+        candidate = PurePosixPath(path.strip())
+        if (
+            not path.strip()
+            or candidate.is_absolute()
+            or ".." in candidate.parts
+            or ".git" in candidate.parts
+            or len(path) > 500
+        ):
+            raise ValueError("invalid repository path")
+        normalized = str(candidate)
+        commit_sha = self.resolve(ref)
+        match = next((item for item in self.tree(commit_sha) if item.path == normalized), None)
+        if match is None:
+            raise FileNotFoundError("path does not exist at requested commit")
+        if match.size > MAX_FILE_BYTES:
+            raise ValueError("repository file exceeds read limit")
+        raw = self.blob(match.blob_sha)
+        if b"\0" in raw[:8192]:
+            raise ValueError("binary repository files are not readable")
+        content = raw.decode("utf-8", "replace")
+        excerpt = content[: max(1, min(int(maximum_chars), 24000))]
+        source_kind, labels = classify_source(normalized)
+        return {
+            "repository": self.canonical_repository,
+            "ref": ref or self.default_ref,
+            "commit_sha": commit_sha,
+            "path": normalized,
+            "paths": [normalized],
+            "blob_sha": match.blob_sha,
+            "source_kind": source_kind,
+            "source_class": source_kind.upper(),
+            "evidence_labels": labels,
+            "content_sha256": hashlib.sha256(raw).hexdigest(),
+            "truncated": len(excerpt) < len(content),
+            "excerpt": excerpt,
+            "truth_status": "external_evidence_unverified",
+            "belief_status": "not_committed",
+            "operator_names": [],
+            "run_id": None,
+            "seed_hash": None,
+            "controls": [],
+            "compute_limits": {},
+        }
+
     def history(self, term: str, limit: int = 20) -> list[dict[str, Any]]:
         term = term.strip()[:128]
         if not term:
@@ -615,7 +665,27 @@ class CKKIndex:
             "ref": metadata["ref"],
             "commit_sha": metadata["commit_sha"],
             "items": items,
+            "paths": [item["path"] for item in items],
+            "operator_names": sorted({
+                symbol for item in items for symbol in item.get("symbols", []) if str(symbol).startswith("op_")
+            }),
+            "run_id": None,
+            "seed_hash": None,
+            "controls": [],
+            "compute_limits": {},
         }
+
+    def symbol(self, name: str, limit: int = 8) -> dict[str, Any]:
+        """Return exact symbol definitions from the indexed canonical commit."""
+        if not _IDENTIFIER.fullmatch(name.strip()):
+            raise ValueError("invalid symbol name")
+        result = self.search(name.strip(), limit=max(1, min(limit, 20)), mode="symbol")
+        result["items"] = [
+            item for item in result["items"]
+            if name.strip().lower() in {str(symbol).lower() for symbol in item.get("symbols", [])}
+        ]
+        result["symbol"] = name.strip()
+        return result
 
     def history(self, term: str, limit: int = 20) -> dict[str, Any]:
         status = self.status()
@@ -673,6 +743,7 @@ class CKKIndex:
             "end_line": int(row["end_line"]),
             "symbols": json.loads(row["symbols"]),
             "source_kind": row["source_kind"],
+            "source_class": str(row["source_kind"]).upper(),
             "evidence_labels": json.loads(row["evidence_labels"]),
             "content_sha256": row["content_sha256"],
             "retrieval_methods": sorted(methods),

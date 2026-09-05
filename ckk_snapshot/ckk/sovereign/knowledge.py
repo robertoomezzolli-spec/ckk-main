@@ -73,9 +73,62 @@ class CKKKnowledgeClient:
             if int(response.status) != 200:
                 raise RuntimeError(f"CKK adapter returned HTTP {response.status}")
             payload = json.loads(response.read(256 * 1024))
-        if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+        if not isinstance(payload, dict):
             raise ValueError("CKK adapter returned an invalid response")
         return payload
+
+    def search(self, query: str, *, limit: int = 6, mode: str = "hybrid") -> dict[str, Any]:
+        result = self._request(
+            "/v1/search", {"query": query, "limit": max(1, min(int(limit), 10)), "mode": mode}
+        )
+        if not isinstance(result.get("items"), list):
+            raise ValueError("CKK search returned invalid items")
+        self._record_success(result)
+        return result
+
+    def read(self, path: str, *, ref: str | None = None) -> dict[str, Any]:
+        body: dict[str, Any] = {"path": path}
+        if ref:
+            body["ref"] = ref
+        result = self._request("/v1/read", body)
+        self._record_success(result)
+        return result
+
+    def symbol(self, name: str, *, limit: int = 6) -> dict[str, Any]:
+        result = self._request("/v1/symbol", {"name": name, "limit": max(1, min(int(limit), 10))})
+        if not isinstance(result.get("items"), list):
+            raise ValueError("CKK symbol lookup returned invalid items")
+        self._record_success(result)
+        return result
+
+    def run(
+        self,
+        seed: str,
+        *,
+        operators: list[str] | None = None,
+        controls: list[str] | None = None,
+        budgets: dict[str, Any] | None = None,
+        ref: str | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            "seed": seed,
+            "operators": operators or [],
+            "controls": controls or ["structural_identity"],
+            "budgets": budgets or {},
+        }
+        if ref:
+            body["ref"] = ref
+        result = self._request("/v1/run", body)
+        required = {"repository", "commit_sha", "paths", "operator_names", "run_id", "seed_hash", "controls", "compute_limits"}
+        if not required.issubset(result):
+            raise ValueError("CKK run returned incomplete provenance")
+        self._record_success(result)
+        return result
+
+    def _record_success(self, result: dict[str, Any]) -> None:
+        self.last_commit_sha = str(result.get("commit_sha") or "") or self.last_commit_sha
+        self.last_error_type = None
+        self.retrievals += 1
 
     def _observations(self, parent_id: str, response: dict[str, Any], query: str = "") -> tuple[Observation, ...]:
         history = [item for item in response.get("history", []) if isinstance(item, dict)]

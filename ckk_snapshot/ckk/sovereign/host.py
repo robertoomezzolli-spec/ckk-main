@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import asyncio
 import hashlib
+import hmac
 import logging
 import os
+import threading
 import time
 from typing import Any
 
@@ -17,6 +19,7 @@ from .brain import OpenAIResponsesCognition
 from .knowledge import CKKKnowledgeClient
 from .organism import SovereignOrganism
 from .runtime import CapabilityPolicy, IngressPolicy, Observation, RuntimePhase, SovereignRuntime
+from .research_tools import SealedResearchToolRegistry
 from .state import SQLiteStateStore
 from .telemetry import HttpTelemetrySink, NullTelemetrySink, TelemetrySink, sanitized_observation
 from .whatsapp import (
@@ -121,6 +124,7 @@ def build_organism(
     store: SQLiteStateStore,
     client: Any = None,
     transport: Any = None,
+    knowledge: CKKKnowledgeClient | None = None,
 ):
     config = WhatsAppConfig(
         settings.owner_wa_id,
@@ -150,6 +154,8 @@ def build_organism(
         capabilities=CapabilityPolicy(frozenset({"whatsapp.send"}), maximum_effects_per_wake=1),
         actuators={"whatsapp.send": actuator},
     )
+    knowledge = knowledge or CKKKnowledgeClient(settings.ckk_adapter_url, settings.ckk_adapter_token)
+    tool_registry = SealedResearchToolRegistry(knowledge, audit_sink=store.record_tool_invocation)
     brain = OpenAIResponsesCognition(
         whatsapp=config,
         client=client,
@@ -160,6 +166,7 @@ def build_organism(
             and inbox.last_message_at(recipient) is not None
             and int(time.time()) - int(inbox.last_message_at(recipient) or 0) <= SERVICE_WINDOW_SECONDS
         ),
+        tool_registry=tool_registry,
     )
     organism = SovereignOrganism(runtime, brain)
     store.restore(organism)
@@ -181,7 +188,12 @@ def create_app(
     os.makedirs(os.path.dirname(os.path.abspath(settings.state_path)), exist_ok=True)
     store = SQLiteStateStore(settings.state_path)
     store.retry_stale()
-    organism, inbox = build_organism(settings, store, client, transport)
+    knowledge = knowledge or CKKKnowledgeClient(
+        settings.ckk_adapter_url,
+        settings.ckk_adapter_token,
+        maximum_results=settings.ckk_maximum_results,
+    )
+    organism, inbox = build_organism(settings, store, client, transport, knowledge)
     if telemetry is None and settings.observatory_ingest_url:
         telemetry = HttpTelemetrySink(
             settings.observatory_ingest_url,
@@ -190,13 +202,11 @@ def create_app(
             settings.openai_model,
         )
     telemetry = telemetry or NullTelemetrySink()
-    knowledge = knowledge or CKKKnowledgeClient(
-        settings.ckk_adapter_url,
-        settings.ckk_adapter_token,
-        maximum_results=settings.ckk_maximum_results,
-    )
     app = FastAPI(title="Sovereign Fixpoint Organism", docs_url=None, redoc_url=None)
     stop = asyncio.Event()
+    cognition_lock = threading.Lock()
+    tool_capabilities = tuple(getattr(organism.cognition.tool_registry, "capabilities", ("whatsapp.send",)))
+    tool_state_version = hashlib.sha256("\n".join(tool_capabilities).encode()).hexdigest()
 
     def process(observation: Observation) -> None:
         event_ref = _event_ref(observation.observation_id)
@@ -210,7 +220,7 @@ def create_app(
         telemetry.emit(
             "OBSERVED", structural, session_id=session_id,
             memory_version=organism.runtime.memory[-1].commit_id if organism.runtime.memory else "genesis",
-            tool_state_version=hashlib.sha256("whatsapp.send".encode()).hexdigest(),
+            tool_state_version=tool_state_version,
         )
         logger.info("observation processing started event_ref=%s kind=%s", event_ref, observation.kind)
         try:
@@ -234,7 +244,8 @@ def create_app(
                  "ckk_commit_sha": knowledge.last_commit_sha},
                 session_id=session_id,
             )
-            effect = organism.think()
+            with cognition_lock:
+                effect = organism.think()
             commit = organism.sleep()
             store.complete(
                 observation,
@@ -335,12 +346,12 @@ def create_app(
         telemetry.emit(
             "SELF_STATE_OBSERVED",
             {"phase": organism.runtime.phase.value,
-             "memory_commits": len(organism.runtime.memory), "capabilities": sorted(organism.runtime.capabilities.allowed),
+             "memory_commits": len(organism.runtime.memory), "capabilities": list(tool_capabilities),
              "sensor_classes": sorted({
                  "whatsapp" if item.startswith("whatsapp:") else item for item in organism.runtime.ingress.sensors
              }), "checkpoint_restored": bool(organism.identity_history)},
             memory_version=organism.runtime.memory[-1].commit_id if organism.runtime.memory else "genesis",
-            tool_state_version=hashlib.sha256("whatsapp.send".encode()).hexdigest(),
+            tool_state_version=tool_state_version,
         )
 
     @app.on_event("shutdown")
@@ -364,7 +375,47 @@ def create_app(
                 "clock": "running" if clock_task is not None and not clock_task.done() else "stopped",
             },
             "ckk_knowledge": knowledge.health(),
+            "capabilities": list(tool_capabilities),
+            "model_tool_registry": organism.cognition.tool_registry.status(),
+            "persisted_tool_invocations": store.tool_invocation_count(),
         }
+
+    @app.post("/internal/ckk-acceptance", include_in_schema=False)
+    async def ckk_acceptance(request: Request):
+        authorization = request.headers.get("authorization", "")
+        if not hmac.compare_digest(authorization, f"Bearer {settings.ckk_adapter_token}"):
+            raise HTTPException(status_code=401, detail="unauthorized")
+        prompt = (
+            "Conduct a read-only CKK verification. First invoke ckk.search for op_winding. From the returned evidence, "
+            "identify and invoke ckk.read on the canonical grammar source. Then invoke ckk.run for a tiny one-level "
+            "FÄCHER run using canonical seed SEED_R, the registered operators, structural_identity control, and explicit "
+            "small compute limits. Pin read and run to the full commit SHA returned by search. Report that commit SHA, "
+            "exact source paths, and only operator names "
+            "actually observed in generated provenance. Do not use prior assumptions as answers."
+        )
+
+        def execute_acceptance() -> dict[str, Any]:
+            with cognition_lock:
+                research = organism.cognition.research(prompt)
+            trace = research["trace"]
+            calls = trace["calls"]
+            by_name = {item["logical_name"]: item for item in calls}
+            search = by_name.get("ckk.search") or {}
+            read = by_name.get("ckk.read") or {}
+            run = by_name.get("ckk.run") or {}
+            commits = {str(item.get("commit_sha")) for item in (search, read, run) if item.get("commit_sha")}
+            passed = (
+                set(by_name).issuperset({"ckk.search", "ckk.read", "ckk.run"})
+                and search.get("arguments", {}).get("query") == "op_winding"
+                and str(read.get("path") or "").endswith("/grammar.py")
+                and bool(run.get("run_id"))
+                and bool(run.get("operator_names"))
+                and len(commits) == 1
+                and len(next(iter(commits), "")) == 40
+            )
+            return {"passed": passed, **research}
+
+        return await asyncio.to_thread(execute_acceptance)
 
     @app.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
     async def privacy_policy():

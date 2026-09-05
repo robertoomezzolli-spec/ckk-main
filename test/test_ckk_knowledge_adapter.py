@@ -168,6 +168,52 @@ class CKKKnowledgeAdapterTests(unittest.TestCase):
             self.assertEqual(health.status_code, 200)
             self.assertTrue(health.json()["read_only_source"])
 
+    def test_read_and_symbol_are_git_tree_bounded_and_commit_pinned(self):
+        read = self.index.mirror.read_path("ckk_snapshot/ckk/gen/grammar.py", self.head)
+        self.assertEqual(read["commit_sha"], self.head)
+        self.assertEqual(read["paths"], ["ckk_snapshot/ckk/gen/grammar.py"])
+        self.assertEqual(read["source_class"], "SOURCE_CODE")
+        self.assertIn("def op_winding", read["excerpt"])
+        symbol = self.index.symbol("op_winding")
+        self.assertEqual(symbol["commit_sha"], self.head)
+        self.assertIn("op_winding", symbol["operator_names"])
+        with self.assertRaises(ValueError):
+            self.index.mirror.read_path("../outside", self.head)
+
+    def test_run_api_delegates_only_validated_request_to_sealed_queue(self):
+        class FakeRunQueue:
+            def __init__(self):
+                self.calls = []
+
+            def run(self, seed, operators, controls, budgets, ref):
+                self.calls.append((seed, operators, controls, budgets, ref))
+                return {
+                    "status": "completed", "repository": "https://github.com/robertoomezzolli-spec/ckk",
+                    "commit_sha": self_head, "paths": ["ckk_snapshot/ckk/gen/grammar.py"],
+                    "operator_names": ["op_close"], "run_id": "a" * 32, "seed_hash": "b" * 64,
+                    "controls": controls, "compute_limits": budgets,
+                }
+
+        self_head = self.head
+        queue = FakeRunQueue()
+        self.index.refresh = lambda: self.index.status()
+        settings = AdapterSettings(
+            "https://github.com/robertoomezzolli-spec/ckk.git", "main", self.temporary.name, "z" * 32, 3600
+        )
+        with TestClient(create_app(settings, self.index, queue)) as client:
+            response = client.post(
+                "/v1/run",
+                headers={"authorization": f"Bearer {'z' * 32}"},
+                json={
+                    "seed": "SEED_R", "operators": [], "controls": ["structural_identity"],
+                    "budgets": {"levels": 1, "state_cap": 100, "derivation_cap": 1000,
+                                "wall_seconds": 5, "memory_mb": 256}, "ref": self.head,
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(queue.calls[0][0], "SEED_R")
+        self.assertEqual(queue.calls[0][4], self.head)
+
     def test_client_bounds_context_and_marks_external_evidence(self):
         payload = self.index.search("op_close", limit=1)
         client = CKKKnowledgeClient("http://adapter", "x" * 32, maximum_results=1)
