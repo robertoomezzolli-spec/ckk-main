@@ -14,6 +14,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from .brain import OpenAIResponsesCognition
+from .knowledge import CKKKnowledgeClient
 from .organism import SovereignOrganism
 from .runtime import CapabilityPolicy, IngressPolicy, Observation, RuntimePhase, SovereignRuntime
 from .state import SQLiteStateStore
@@ -78,6 +79,9 @@ class HostSettings:
     observatory_ingest_url: str = ""
     observatory_ingest_token: str = ""
     subject_version: str = "unknown"
+    ckk_adapter_url: str = ""
+    ckk_adapter_token: str = ""
+    ckk_maximum_results: int = 6
 
     @classmethod
     def from_env(cls) -> "HostSettings":
@@ -106,6 +110,9 @@ class HostSettings:
             observatory_ingest_url=os.getenv("OBSERVATORY_INGEST_URL", ""),
             observatory_ingest_token=os.getenv("OBSERVATORY_INGEST_TOKEN", ""),
             subject_version=os.getenv("SOVEREIGN_SUBJECT_VERSION", "unknown"),
+            ckk_adapter_url=os.getenv("CKK_ADAPTER_URL", ""),
+            ckk_adapter_token=os.getenv("CKK_ADAPTER_TOKEN", ""),
+            ckk_maximum_results=max(1, min(10, int(os.getenv("CKK_MAXIMUM_RESULTS", "6")))),
         )
 
 
@@ -133,8 +140,11 @@ def build_organism(
     actuator = WhatsAppCloudActuator(**actuator_args)
     runtime = SovereignRuntime(
         ingress=IngressPolicy(
-            frozenset({"internal.clock", *(f"whatsapp:{item}" for item in config.admitted_wa_ids)}),
-            frozenset({"clock.tick", "message.text", "message.document", "message.image", "message.audio"}),
+            frozenset({"internal.clock", "ckk.repository", *(f"whatsapp:{item}" for item in config.admitted_wa_ids)}),
+            frozenset({
+                "clock.tick", "message.text", "message.document", "message.image", "message.audio",
+                "evidence.source",
+            }),
             maximum_payload_bytes=64 * 1024,
         ),
         capabilities=CapabilityPolicy(frozenset({"whatsapp.send"}), maximum_effects_per_wake=1),
@@ -165,6 +175,7 @@ def create_app(
     client: Any = None,
     transport: Any = None,
     telemetry: TelemetrySink | None = None,
+    knowledge: CKKKnowledgeClient | None = None,
 ):
     settings = settings or HostSettings.from_env()
     os.makedirs(os.path.dirname(os.path.abspath(settings.state_path)), exist_ok=True)
@@ -179,6 +190,11 @@ def create_app(
             settings.openai_model,
         )
     telemetry = telemetry or NullTelemetrySink()
+    knowledge = knowledge or CKKKnowledgeClient(
+        settings.ckk_adapter_url,
+        settings.ckk_adapter_token,
+        maximum_results=settings.ckk_maximum_results,
+    )
     app = FastAPI(title="Sovereign Fixpoint Organism", docs_url=None, redoc_url=None)
     stop = asyncio.Event()
 
@@ -202,13 +218,20 @@ def create_app(
                 timestamp = int(observation.payload["timestamp"])
                 inbox.record_message(observation.sensor.removeprefix("whatsapp:"), timestamp)
             organism.perceive(observation)
+            ckk_evidence = knowledge.observations_for(observation)
+            for evidence in ckk_evidence:
+                organism.perceive(evidence)
+            if ckk_evidence:
+                store.record_external_evidence(observation.observation_id, ckk_evidence)
             recent = store.recent_episodes(1000)
             if observation.sensor.startswith("whatsapp:"):
                 recent = [item for item in recent if (item.get("observation") or {}).get("sensor") == observation.sensor]
             telemetry.emit(
                 "RETRIEVED",
                 {"event_ref": structural["event_ref"], "episodic_count": min(len(recent), 24),
-                 "committed_belief_count": pre_belief_count, "content_exported": False},
+                 "committed_belief_count": pre_belief_count, "content_exported": False,
+                 "ckk_external_evidence_count": len(ckk_evidence),
+                 "ckk_commit_sha": knowledge.last_commit_sha},
                 session_id=session_id,
             )
             effect = organism.think()
@@ -265,10 +288,13 @@ def create_app(
                 len(provider.get("messages") or []),
             )
         except Exception as exc:
+            wake_observation_ids = tuple(item.observation_id for item in organism.runtime.inbox)
             organism.runtime.pending_intent = None
             organism.runtime.inbox.clear()
             organism.runtime.effects.clear()
             organism._pending_learning.clear()
+            for observation_id in wake_observation_ids:
+                organism.runtime._seen_observations.discard(observation_id)
             organism.runtime._seen_observations.discard(observation.observation_id)
             organism.runtime.phase = RuntimePhase.WAKE
             store.fail(observation.observation_id, f"{type(exc).__name__}: {exc}")
@@ -337,6 +363,7 @@ def create_app(
                 "worker": "running" if worker_task is not None and not worker_task.done() else "stopped",
                 "clock": "running" if clock_task is not None and not clock_task.done() else "stopped",
             },
+            "ckk_knowledge": knowledge.health(),
         }
 
     @app.get("/privacy", response_class=HTMLResponse, include_in_schema=False)

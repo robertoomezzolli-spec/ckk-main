@@ -1,4 +1,31 @@
 services:
+  ckk-knowledge:
+    image: ckk-knowledge:local
+    build:
+      context: .
+      dockerfile: Dockerfile.ckk-knowledge
+    restart: unless-stopped
+    env_file:
+      - .env.ckk-knowledge
+    environment:
+      CKK_REPOSITORY_URL: https://github.com/robertoomezzolli-spec/ckk.git
+      CKK_REPOSITORY_REF: main
+      CKK_CACHE_DIRECTORY: /cache
+      CKK_REFRESH_SECONDS: "900"
+    expose:
+      - "8070"
+    volumes:
+      - ckk-knowledge-cache:/cache
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - internal
+
   organism:
     image: ckk-sovereign:local
     build:
@@ -8,6 +35,13 @@ services:
     env_file:
       - .env.sovereign
       - .env.observatory-ingest
+      - .env.ckk-knowledge
+    environment:
+      CKK_ADAPTER_URL: http://ckk-knowledge:8070
+      CKK_MAXIMUM_RESULTS: "6"
+    depends_on:
+      ckk-knowledge:
+        condition: service_healthy
     expose:
       - "8080"
     volumes:
@@ -105,6 +139,7 @@ services:
 volumes:
   sovereign-state:
   observatory-state:
+  ckk-knowledge-cache:
   caddy-data:
   caddy-config:
 

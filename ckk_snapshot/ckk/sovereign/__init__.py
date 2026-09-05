@@ -34,6 +34,7 @@ from .whatsapp import (  # noqa: F401
     verify_webhook_signature,
 )
 from .brain import OpenAIResponsesCognition  # noqa: F401
+from .knowledge import CKKKnowledgeClient  # noqa: F401
 from .state import SQLiteStateStore  # noqa: F401
 from .learning import (  # noqa: F401
     Belief,

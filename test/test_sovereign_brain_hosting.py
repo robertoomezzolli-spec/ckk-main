@@ -116,6 +116,25 @@ class SovereignBrainHostingTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             brain.reflect((observation,), (), {}, BootstrapLaws())
 
+    def test_ckk_evidence_is_scoped_to_current_wake_and_labeled_external(self):
+        client = FakeClient(decision("service_message", "Evidence checked"))
+        brain = OpenAIResponsesCognition(
+            WhatsAppConfig(OWNER, "phone"), client=client, service_window_provider=lambda recipient: True
+        )
+        inbound = Observation("wa:ckk", f"whatsapp:{OWNER}", "message.text", {"text": "show op_close"}, 1.0)
+        evidence = Observation(
+            "ckk:one", "ckk.repository", "evidence.source",
+            {"path": "ckk_snapshot/ckk/gen/grammar.py", "commit_sha": "a" * 40,
+             "source_kind": "source_code", "truth_status": "external_evidence_unverified",
+             "belief_status": "not_committed", "excerpt": "def op_close(s): ..."}, 0.75,
+        )
+        result = brain.reflect((inbound, evidence), (), {}, BootstrapLaws())
+        self.assertEqual(result.learning, ())
+        call = client.responses.calls[0]
+        payload = json.loads(call["input"])
+        self.assertEqual(payload["current_observations"][1]["observation_id"], "ckk:one")
+        self.assertIn("not truth and not committed belief", call["instructions"])
+
     def test_real_actuator_sends_only_after_policy_check(self):
         config = WhatsAppConfig(OWNER, "phone")
         inbox = WhatsAppInbox(config, last_owner_message_at=int(time.time()))

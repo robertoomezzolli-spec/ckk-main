@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/ckk_snapshot \
+    CKK_CACHE_DIRECTORY=/cache
+
+WORKDIR /app
+COPY requirements-knowledge.txt ./
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir -r requirements-knowledge.txt
+COPY ckk_snapshot/ckk/knowledge_adapter ./ckk_snapshot/ckk/knowledge_adapter
+RUN mkdir -p /cache && useradd --system --uid 10003 knowledge && chown -R knowledge:knowledge /cache
+
+USER knowledge
+EXPOSE 8070
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8070/healthz', timeout=3)"
+CMD ["uvicorn", "ckk.knowledge_adapter.asgi:app", "--host", "0.0.0.0", "--port", "8070", "--workers", "1"]

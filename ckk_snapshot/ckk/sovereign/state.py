@@ -39,6 +39,21 @@ class SQLiteStateStore:
                     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
                     state_json TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS external_evidence (
+                    observation_id TEXT PRIMARY KEY,
+                    parent_event_id TEXT NOT NULL,
+                    repository TEXT NOT NULL,
+                    ref TEXT NOT NULL,
+                    commit_sha TEXT NOT NULL,
+                    base_commit_sha TEXT NOT NULL,
+                    blob_sha TEXT NOT NULL,
+                    path TEXT NOT NULL,
+                    start_line INTEGER,
+                    end_line INTEGER,
+                    source_kind TEXT NOT NULL,
+                    evidence_labels_json TEXT NOT NULL,
+                    content_sha256 TEXT NOT NULL
+                );
                 """
             )
 
@@ -98,6 +113,33 @@ class SQLiteStateStore:
                 "SELECT episode_json FROM episodes ORDER BY sequence DESC LIMIT ?", (limit,)
             ).fetchall()
         return [json.loads(row["episode_json"]) for row in reversed(rows)]
+
+    def record_external_evidence(self, parent_event_id: str, observations: tuple[Observation, ...]) -> None:
+        """Persist provenance only; excerpts never enter episodic context or checkpoint state."""
+        with self._lock, self._db:
+            for observation in observations:
+                if observation.sensor != "ckk.repository" or observation.kind != "evidence.source":
+                    raise ValueError("external evidence store accepts only CKK evidence observations")
+                payload = observation.payload
+                self._db.execute(
+                    "INSERT OR IGNORE INTO external_evidence("
+                    "observation_id,parent_event_id,repository,ref,commit_sha,base_commit_sha,blob_sha,path,"
+                    "start_line,end_line,source_kind,evidence_labels_json,content_sha256"
+                    ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        observation.observation_id, parent_event_id, str(payload["repository"]),
+                        str(payload.get("ref") or ""), str(payload["commit_sha"]),
+                        str(payload.get("base_commit_sha") or ""), str(payload.get("blob_sha") or ""),
+                        str(payload["path"]), payload.get("start_line"), payload.get("end_line"),
+                        str(payload["source_kind"]), json.dumps(payload.get("evidence_labels") or [], sort_keys=True),
+                        str(payload.get("content_sha256") or ""),
+                    ),
+                )
+
+    def external_evidence_count(self) -> int:
+        with self._lock:
+            row = self._db.execute("SELECT COUNT(*) FROM external_evidence").fetchone()
+        return int(row[0])
 
     def communication_state(self) -> tuple[dict[str, int], list[int]]:
         """Recover service-window and proactive budget state after restart."""
