@@ -519,6 +519,15 @@ class CKKIndex:
         symbol_queries = [item for item in _IDENTIFIER.findall(query) if item.startswith("op_")]
         lowered_query = query.lower()
         with self._lock, self._connect() as db:
+            dimensional_limit_query = (
+                any(term in lowered_query for term in ("dimension", "dimensional", "dim "))
+                and any(term in lowered_query for term in ("limit", "cutoff", "bound", "maximum", "cap"))
+            )
+            if mode in {"hybrid", "semantic"} and dimensional_limit_query:
+                for row in db.execute(
+                    "SELECT chunk_id FROM symbol_index WHERE symbol='MAXDIM' COLLATE NOCASE LIMIT 30"
+                ):
+                    add(int(row[0]), 14.0, "semantic_symbol_expansion")
             if mode == "hybrid" and ("snapshot" in lowered_query or re.search(r"run[- ]?34", lowered_query)):
                 for row in db.execute(
                     "SELECT c.chunk_id FROM chunks c JOIN documents d ON d.document_id=c.document_id "

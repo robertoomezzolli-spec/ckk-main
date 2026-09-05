@@ -135,7 +135,8 @@ class CKKKnowledgeAdapterTests(unittest.TestCase):
 
     def test_semantic_retrieval_is_local_and_code_aware(self):
         result = self.index.search("where is the dimensional cutoff defined", mode="semantic")
-        self.assertTrue(any(item["path"] == "ckk_snapshot/ckk/gen/grammar.py" for item in result["items"]))
+        grammar = next(item for item in result["items"] if item["path"] == "ckk_snapshot/ckk/gen/grammar.py")
+        self.assertIn("semantic_symbol_expansion", grammar["retrieval_methods"])
         self.assertTrue(any("semantic_vector" in item["retrieval_methods"] for item in result["items"]))
 
     def test_disk_index_remains_available_without_live_git_checkout(self):
