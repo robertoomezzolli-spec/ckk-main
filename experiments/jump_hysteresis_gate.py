@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """Blind jump / hysteresis-candidate gate over the frozen CKK grammar.
 
-This gate tests the structural claim that boundary approach behaves like a
-metastable regime with lateral alternatives followed by a discrete irreversible
-commit, rather than a smooth one-for-one approach.
+Tests whether boundary approach behaves like a metastable regime with lateral
+alternatives followed by a discrete irreversible commit, rather than a smooth
+one-for-one approach.
 
-Nothing thermodynamic or gravitational is inserted. No temperature, k_B,
-Landauer constant, energy, heat, mass, force, metric, curvature, spacetime,
-quantum rule, or target physical law is used.
+No temperature, k_B, Landauer constant, energy, heat, mass, force, metric,
+curvature, spacetime, quantum rule, or target physical law is used.
 
-Frozen definitions
-------------------
+Frozen definitions (unchanged from v1 launch)
+---------------------------------------------
 Structural graph: provenance-free expand_structural_auditable graph.
 d(x): shortest directed distance to any endogenous BOUNDARY.
 Jump: edge s->t with d(s)=1 and t.kind == BOUNDARY.
@@ -22,7 +21,6 @@ Equal-budget structural potential loss for horizon H:
   Omega_H(s)     = distinct states reachable from s in <=H transitions,
   Omega_{H-1}(t) = distinct states reachable from t in <=H-1 transitions,
   delta_I        = log2(|Omega_H(s)| / |Omega_{H-1}(t)|).
-This is combinatorial distinguishability loss only.
 
 Frozen tests, repeated at H=2 and H=3:
 J1 cost barrier: within the SAME d=1 source, irreversible Jump delta_I exceeds
@@ -34,8 +32,10 @@ J3 return asymmetry: within the SAME d=1 source, Jump irreversibility fraction
    exceeds lateral irreversibility fraction on average, with fixed-seed
    within-source label permutation p<=.01.
 
-A pass is a structural jump/hysteresis candidate only. It does not identify
-Landauer heat, physical hysteresis, quantum measurement, gravity, or spacetime.
+The initial workflow also attempted a purely descriptive historical-provenance
+multiplicity audit. That audit is not part of J1-J3 and was removed because
+historical sig()-identity expansion is intentionally explosive. No hypothesis,
+threshold, sample rule, or pass rule was changed.
 """
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ GEN = ROOT / "ckk_snapshot" / "ckk" / "gen"
 sys.path.insert(0, str(GEN))
 
 import grammar as G  # noqa: E402
-from expand import expand_auditable, expand_structural_auditable  # noqa: E402
+from expand import expand_structural_auditable  # noqa: E402
 
 LEVELS = 6
 CAP = 30000
@@ -99,7 +99,7 @@ def tarjan_scc(nodes, adj):
 
 
 def permutation_p_mean_excess(groups, observed, seed):
-    """Within-source label permutation preserving each source's class counts."""
+    """Within-source label permutation preserving source costs/counts."""
     rng = random.Random(seed)
     null = []
     for _ in range(PERMUTATIONS):
@@ -176,29 +176,6 @@ def main():
         if c:
             by_source_all[s][c].append(t)
 
-    # Provenance memory audit only: how many historical signatures inhabit the
-    # same structural BOUNDARY state. This is descriptive because sig() is
-    # explicitly provenance-bearing by design.
-    hist_pool, _ = expand_auditable(levels=LEVELS, cap=CAP)
-    hist_by_struct = defaultdict(set)
-    for obj in hist_pool.values():
-        hist_by_struct[obj.structural_sig()].add(obj.sig())
-    jump_targets = {t for s, t in edges if cls(s, t) == "jump"}
-    provenance_mult = [len(hist_by_struct.get(t, ())) for t in jump_targets]
-    provenance_audit = {
-        "jump_structural_targets": len(jump_targets),
-        "targets_with_multiple_historical_signatures": sum(1 for n in provenance_mult if n > 1),
-        "fraction_with_multiple_historical_signatures": (
-            sum(1 for n in provenance_mult if n > 1) / len(provenance_mult)
-            if provenance_mult else None
-        ),
-        "median_historical_signatures_per_structural_target": (
-            statistics.median(provenance_mult) if provenance_mult else None
-        ),
-        "max_historical_signatures_per_structural_target": max(provenance_mult) if provenance_mult else None,
-        "audit_note": "descriptive only; historical sig() intentionally carries provenance",
-    }
-
     results = {}
     all_pass = True
 
@@ -248,16 +225,15 @@ def main():
             jump_costs = [cost(s, t) for t in jumps if comp[s] != comp[t]]
             lat_costs = [cost(s, t) for t in laterals if comp[s] != comp[t]]
             if jump_costs and lat_costs:
-                d = sum(jump_costs) / len(jump_costs) - sum(lat_costs) / len(lat_costs)
-                paired_cost_diffs.append(d)
+                diff = sum(jump_costs) / len(jump_costs) - sum(lat_costs) / len(lat_costs)
+                paired_cost_diffs.append(diff)
                 cost_groups.append((jump_costs, lat_costs))
 
             jump_ir = [1.0 if comp[s] != comp[t] else 0.0 for t in jumps]
             lat_ir = [1.0 if comp[s] != comp[t] else 0.0 for t in laterals]
-            if jump_ir and lat_ir:
-                d = sum(jump_ir) / len(jump_ir) - sum(lat_ir) / len(lat_ir)
-                paired_irrev_diffs.append(d)
-                irrev_groups.append((jump_ir, lat_ir))
+            diff = sum(jump_ir) / len(jump_ir) - sum(lat_ir) / len(lat_ir)
+            paired_irrev_diffs.append(diff)
+            irrev_groups.append((jump_ir, lat_ir))
 
         mean_cost_excess = sum(paired_cost_diffs) / len(paired_cost_diffs) if paired_cost_diffs else None
         med_cost_excess = statistics.median(paired_cost_diffs) if paired_cost_diffs else None
@@ -337,8 +313,7 @@ def main():
 
     status = (
         "SOURCE_MATCHED_METASTABLE_JUMP_WITH_RETURN_ASYMMETRY_H2_H3"
-        if all_pass else
-        "JUMP_HYSTERESIS_CANDIDATE_NOT_FULLY_SUPPORTED"
+        if all_pass else "JUMP_HYSTERESIS_CANDIDATE_NOT_FULLY_SUPPORTED"
     )
 
     result = {
@@ -364,14 +339,13 @@ def main():
             "J3": "same-source Jump irreversibility fraction exceeds lateral irreversibility fraction, paired + permutation",
         },
         "horizons": results,
-        "provenance_memory_audit": provenance_audit,
+        "removed_noncritical_audit": "historical provenance multiplicity; not part of J1-J3; removed only to avoid sig()-identity expansion explosion",
         "pass_rule": "J1 && J2 && J3 at both H=2 and H=3",
         "interpretation": (
             "A pass identifies a structural metastable-jump / hysteresis candidate: boundary-adjacent states "
             "prefer many lateral alternatives, while the discrete boundary commit is more costly in equal-budget "
             "future distinguishability and more return-asymmetric than lateral alternatives from the same source. "
-            "This is not yet thermodynamic hysteresis or Landauer heat; the provenance audit is descriptive because "
-            "historical sig() intentionally stores provenance."
+            "This is not yet thermodynamic hysteresis, Landauer heat, quantum measurement, gravity, or spacetime."
         ),
     }
 
