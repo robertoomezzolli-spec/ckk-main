@@ -1,0 +1,24 @@
+name: CKK external Stage B 2pi matcher
+on:
+  push:
+    branches: [experiment/solar-system-provenance-cascade]
+    paths:
+      - 'experiments/cycle_2pi_stage_b.py'
+      - 'experiments/cycle_2pi_stage_b_targets.json'
+      - '.github/workflows/cycle-2pi-stage-b.yml'
+  workflow_dispatch:
+jobs:
+  stage-b:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Run external Stage B
+        run: python experiments/cycle_2pi_stage_b.py
+      - name: Show result
+        run: cat results/cycle_2pi_blind/stage_b_external.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cycle-2pi-stage-b
+          path: results/cycle_2pi_blind/stage_b_external.json
