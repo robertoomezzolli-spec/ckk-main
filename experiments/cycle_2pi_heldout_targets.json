@@ -1,0 +1,37 @@
+{
+  "schema": "ckk.cycle-2pi-heldout.targets.v1",
+  "frozen_before_run": true,
+  "purpose": "Attack specificity of the already-sealed CKK CYCLE->WINDING motif on unseen physical cases. This is not a discovery benchmark; it asks whether the motif separates phase/topological 2pi closure from ordinary cyclic or geometrically winding dynamics.",
+  "sealed_motif": {"cycle": 1, "integer_winding": 1},
+  "primary_gate": {
+    "permutation_p_max": 0.05,
+    "max_full_match_controls": 1,
+    "note": "PASS requires both enrichment and specificity. A control scoring 2/2 is a full-match false positive for this benchmark."
+  },
+  "positive_targets": [
+    {"id":"quantum_particle_on_ring","features":{"cycle":1,"integer_winding":1},"basis":"single-valued wavefunction on angular coordinate gives integer azimuthal mode"},
+    {"id":"optical_vortex_topological_charge","features":{"cycle":1,"integer_winding":1},"basis":"optical phase accumulates 2pi times integer topological charge around phase singularity"},
+    {"id":"bec_quantized_vortex","features":{"cycle":1,"integer_winding":1},"basis":"condensate phase winds by 2pi times integer around vortex core"},
+    {"id":"spherical_harmonic_azimuthal_quantization","features":{"cycle":1,"integer_winding":1},"basis":"phi periodicity and single-valuedness imply integer magnetic quantum number"},
+    {"id":"xy_model_vortex","features":{"cycle":1,"integer_winding":1},"basis":"order-parameter angle winds by integer multiples of 2pi around vortex"}
+  ],
+  "negative_controls": [
+    {"id":"classical_harmonic_oscillator","features":{"cycle":1,"integer_winding":0},"adversarial":"periodic but no integer topological phase winding"},
+    {"id":"simple_pendulum_libration","features":{"cycle":1,"integer_winding":0},"adversarial":"periodic but no integer topological phase winding"},
+    {"id":"ordinary_diffusion_heldout","features":{"cycle":0,"integer_winding":0}},
+    {"id":"exponential_relaxation","features":{"cycle":0,"integer_winding":0}},
+    {"id":"kepler_closed_orbit_geometric_winding","features":{"cycle":1,"integer_winding":1},"adversarial":"closed orbit winds geometrically around focus but has no topological quantization requirement"},
+    {"id":"classical_rotor_turn_count","features":{"cycle":1,"integer_winding":1},"adversarial":"integer turn count exists classically without quantum/topological quantization"}
+  ],
+  "transfer_targets": [
+    {"id":"spin_half_4pi_return","features":{"cycle":1,"integer_winding":0},"role":"anti-overclaim control: physical return requires 4pi, so CYCLE must not be equated numerically with universal 2pi return"},
+    {"id":"euclidean_black_hole_periodicity_heldout","features":{"cycle":1,"integer_winding":0},"role":"periodicity without integer winding"}
+  ],
+  "integrity": {
+    "kernel_may_be_read": false,
+    "kernel_may_be_written": false,
+    "no_parameter_fitting": true,
+    "no_posthoc_target_relabeling": true,
+    "no_threshold_changes_after_run": true
+  }
+}
