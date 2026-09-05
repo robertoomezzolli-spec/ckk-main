@@ -1,0 +1,20 @@
+name: global-loop-overdetermination
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run global loop overdetermination test
+        run: python experiments/global_loop_overdetermination.py
+      - name: Show result
+        if: always()
+        run: cat results/global_loop_overdetermination.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: global-loop-overdetermination-result
+          path: results/global_loop_overdetermination.json
