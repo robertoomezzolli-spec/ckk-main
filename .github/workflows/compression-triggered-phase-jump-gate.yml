@@ -1,0 +1,28 @@
+name: compression-triggered-phase-jump-gate
+
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+    paths:
+      - experiments/compression_triggered_phase_jump_gate.py
+      - .github/workflows/compression-triggered-phase-jump-gate.yml
+      - ckk_snapshot/ckk/gen/**
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run blind compression-triggered phase jump gate
+        run: python experiments/compression_triggered_phase_jump_gate.py
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: compression-triggered-phase-jump-result
+          path: results/compression_triggered_phase_jump_gate.json
+          if-no-files-found: error
