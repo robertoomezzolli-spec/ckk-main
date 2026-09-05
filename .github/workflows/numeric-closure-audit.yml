@@ -1,0 +1,27 @@
+name: numeric-closure-audit
+
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+    paths:
+      - experiments/numeric_closure_audit.py
+      - .github/workflows/numeric-closure-audit.yml
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run numeric closure audit
+        run: python experiments/numeric_closure_audit.py
+      - name: Show result
+        run: cat results/numeric_closure/audit.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: numeric-closure-audit
+          path: results/numeric_closure/audit.json
