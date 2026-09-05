@@ -1,0 +1,28 @@
+{
+  "schema": "ckk.cycle-2pi-blind.stage-b-targets.v1",
+  "frozen_before_run": true,
+  "primary_hypothesis": "Physical targets whose established structure requires both periodic closure and integer winding/quantization should match the sealed CKK CYCLE->WINDING motif more strongly than non-periodic controls.",
+  "features": ["cycle", "integer_winding"],
+  "positive_targets": [
+    {"id":"superconducting_flux_quantization","features":{"cycle":1,"integer_winding":1},"source":"https://physics.nist.gov/cuu/pdf/1969RMP.pdf"},
+    {"id":"superfluid_circulation","features":{"cycle":1,"integer_winding":1},"source":"https://arxiv.org/abs/2109.12945"},
+    {"id":"dirac_quantization","features":{"cycle":1,"integer_winding":1},"source":"https://arxiv.org/abs/2501.04704"},
+    {"id":"bohr_sommerfeld_closed_action","features":{"cycle":1,"integer_winding":1},"source":"standard semiclassical closed-orbit quantization; target frozen here as a structural benchmark"}
+  ],
+  "transfer_targets": [
+    {"id":"euclidean_black_hole_periodicity","features":{"cycle":1,"integer_winding":0},"role":"tests whether CYCLE alone transfers without forcing WINDING"}
+  ],
+  "negative_controls": [
+    {"id":"free_inertial_translation","features":{"cycle":0,"integer_winding":0}},
+    {"id":"ordinary_diffusion","features":{"cycle":0,"integer_winding":0}},
+    {"id":"radioactive_exponential_decay","features":{"cycle":0,"integer_winding":0}},
+    {"id":"newtonian_constant_acceleration_local_segment","features":{"cycle":0,"integer_winding":0}}
+  ],
+  "integrity": {
+    "kernel_may_be_read": false,
+    "kernel_may_be_written": false,
+    "stage_a_artifact_only": true,
+    "no_parameter_fitting": true,
+    "no_posthoc_target_relabeling": true
+  }
+}
