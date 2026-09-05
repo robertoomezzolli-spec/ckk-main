@@ -28,6 +28,7 @@ from .whatsapp import (
     WhatsAppConfig,
     WhatsAppInbox,
     extract_delivery_statuses,
+    service_intent,
     verify_challenge,
 )
 
@@ -416,6 +417,87 @@ def create_app(
             return {"passed": passed, **research}
 
         return await asyncio.to_thread(execute_acceptance)
+
+    @app.post("/internal/research-publishing-acceptance", include_in_schema=False)
+    async def research_publishing_acceptance(request: Request):
+        authorization = request.headers.get("authorization", "")
+        if not hmac.compare_digest(authorization, f"Bearer {settings.ckk_adapter_token}"):
+            raise HTTPException(status_code=401, detail="unauthorized")
+        prompt = (
+            "Execute one tiny CKK FÄCHER run pinned to the current canonical commit. Use canonical seed SEED_R, "
+            "all registered operators, structural_identity control, and budgets of exactly: levels 1, state_cap 100, "
+            "derivation_cap 1000, wall_seconds 5, memory_mb 256. After the run completes, publish that exact run with "
+            "research.publish. Do not supply an interpretation or infer operators not present in provenance."
+        )
+
+        def execute_publication_acceptance() -> dict[str, Any]:
+            with cognition_lock:
+                research = organism.cognition.publish_research(prompt)
+            calls = research["trace"]["calls"]
+            matching: tuple[dict[str, Any], dict[str, Any]] | None = None
+            for run_index, run in enumerate(calls):
+                if run.get("logical_name") != "ckk.run" or run.get("status") != "completed":
+                    continue
+                for publication in calls[run_index + 1:]:
+                    if (
+                        publication.get("logical_name") == "research.publish"
+                        and publication.get("status") == "published"
+                        and publication.get("run_id") == run.get("run_id")
+                        and publication.get("commit_sha") == run.get("commit_sha")
+                    ):
+                        matching = (run, publication)
+                        break
+                if matching:
+                    break
+            if matching is None:
+                return {"passed": False, "reason": "model did not publish its completed CKK run", **research}
+            run, publication = matching
+            publication_url = str(publication.get("publication_url") or "")
+            passed = (
+                publication_url.startswith("https://kairos.206-189-55-212.sslip.io/research/")
+                and len(str(run.get("commit_sha") or "")) == 40
+                and bool(run.get("operator_names"))
+                and publication.get("controls_completed") is True
+                and publication.get("classification") == "DIRECT"
+            )
+            notification: dict[str, Any] = {"attempted": False, "accepted": False}
+            if passed:
+                text = f"COMPLETED GENERATED RUN\n{publication_url}"
+                try:
+                    actuator = organism.runtime.actuators["whatsapp.send"]
+                    effect = actuator.execute(service_intent(
+                        organism.cognition.whatsapp, text, "notify owner of completed published CKK run"
+                    ))
+                    output = effect.output if isinstance(effect.output, dict) else {}
+                    provider = output.get("provider") if isinstance(output.get("provider"), dict) else {}
+                    notification = {
+                        "attempted": True,
+                        "accepted": effect.success and not effect.simulated,
+                        "provider_http_status": output.get("provider_http_status"),
+                        "provider_message_count": len(provider.get("messages") or []),
+                        "body_contains_only_short_verdict_and_url": text == f"COMPLETED GENERATED RUN\n{publication_url}",
+                    }
+                except Exception as exc:
+                    notification = {
+                        "attempted": True, "accepted": False, "error_type": type(exc).__name__,
+                        "error": str(exc)[:300],
+                    }
+            passed = passed and notification.get("accepted") is True
+            logger.info(
+                "research publication acceptance passed=%s run_id=%s notification_status=%s",
+                passed, str(run.get("run_id", ""))[:12], notification.get("provider_http_status"),
+            )
+            return {
+                "passed": passed,
+                "run_id": run.get("run_id"),
+                "commit_sha": run.get("commit_sha"),
+                "publication_url": publication_url,
+                "operator_names": run.get("operator_names"),
+                "notification": notification,
+                **research,
+            }
+
+        return await asyncio.to_thread(execute_publication_acceptance)
 
     @app.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
     async def privacy_policy():

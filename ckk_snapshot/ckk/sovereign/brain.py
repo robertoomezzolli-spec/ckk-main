@@ -63,6 +63,18 @@ RESEARCH_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
 }
 
+PUBLISHING_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "short_verdict": {"type": "string"},
+        "publication_url": {"type": "string"},
+        "run_id": {"type": "string"},
+        "commit_sha": {"type": "string"},
+    },
+    "required": ["short_verdict", "publication_url", "run_id", "commit_sha"],
+    "additionalProperties": False,
+}
+
 
 @dataclass
 class OpenAIResponsesCognition:
@@ -184,6 +196,30 @@ class OpenAIResponsesCognition:
         )
         return {"result": raw, "trace": trace}
 
+    def publish_research(self, prompt: str) -> dict[str, Any]:
+        """Execute and publish a run through sealed tools on production cognition.
+
+        The result is neither written into episodic history nor promoted into a
+        belief. The publisher accepts only a run ID and renders sealed artifacts.
+        """
+        if self.tool_registry is None:
+            raise RuntimeError("sealed research tool registry is unavailable")
+        instructions = (
+            "You are the production KAIROS cognition process conducting one bounded CKK experiment. "
+            "Invoke ckk.run with the exact constraints in the task, then invoke research.publish with the run_id "
+            "returned by that completed run. The publisher is the only publishing mechanism; it accepts no authored "
+            "website content. CKK output remains external evidence and is not a committed belief. Do not call "
+            "whatsapp.send. Return only a short factual verdict, the publisher URL, run ID, and exact commit SHA."
+        )
+        raw, trace = self._run_response(
+            instructions=instructions,
+            input_value=prompt,
+            schema_name="sovereign_ckk_publication_result",
+            schema=PUBLISHING_SCHEMA,
+            required_tools={"ckk.run", "research.publish"},
+        )
+        return {"result": raw, "trace": trace}
+
     def _run_response(
         self,
         *,
@@ -244,6 +280,9 @@ class OpenAIResponsesCognition:
                         "repository": result.get("repository"), "commit_sha": result.get("commit_sha"),
                         "path": result.get("path"), "paths": result.get("paths", []),
                         "run_id": result.get("run_id"), "operator_names": result.get("operator_names", []),
+                        "status": result.get("status"), "publication_url": result.get("publication_url"),
+                        "classification": result.get("classification"),
+                        "controls_completed": result.get("controls_completed"),
                     })
                     input_items.append({
                         "type": "function_call_output", "call_id": call_id,

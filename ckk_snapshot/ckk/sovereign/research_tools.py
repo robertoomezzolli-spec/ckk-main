@@ -86,6 +86,20 @@ WHATSAPP_NAMESPACE: dict[str, Any] = {
     }],
 }
 
+RESEARCH_NAMESPACE: dict[str, Any] = {
+    "type": "namespace",
+    "name": "research",
+    "description": (
+        "Sealed publisher for an existing completed CKK run. It cannot edit arbitrary web content and publishes "
+        "only validated run artifacts with provenance. Publishing does not commit evidence as belief."
+    ),
+    "tools": [{
+        "type": "function", "name": "publish", "strict": True,
+        "description": "Logical capability research.publish: publish one completed CKK run by exact run ID.",
+        "parameters": _object({"run_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"}}, ["run_id"]),
+    }],
+}
+
 
 @dataclass
 class SealedResearchToolRegistry:
@@ -95,11 +109,11 @@ class SealedResearchToolRegistry:
 
     @property
     def capabilities(self) -> tuple[str, ...]:
-        return ("whatsapp.send", "ckk.search", "ckk.read", "ckk.symbol", "ckk.run")
+        return ("whatsapp.send", "ckk.search", "ckk.read", "ckk.symbol", "ckk.run", "research.publish")
 
     @property
     def definitions(self) -> list[dict[str, Any]]:
-        return deepcopy([WHATSAPP_NAMESPACE, CKK_NAMESPACE])
+        return deepcopy([WHATSAPP_NAMESPACE, CKK_NAMESPACE, RESEARCH_NAMESPACE])
 
     @property
     def definition_sha256(self) -> str:
@@ -109,18 +123,20 @@ class SealedResearchToolRegistry:
     def logical_name(name: str, namespace: str | None = None) -> str:
         aliases = {
             "ckk_search": "ckk.search", "ckk_read": "ckk.read", "ckk_symbol": "ckk.symbol", "ckk_run": "ckk.run",
-            "whatsapp_send": "whatsapp.send",
+            "whatsapp_send": "whatsapp.send", "research_publish": "research.publish",
         }
         if name in aliases:
             return aliases[name]
         if "." in name:
             return name
-        if namespace in {"ckk", "whatsapp"}:
+        if namespace in {"ckk", "whatsapp", "research"}:
             return f"{namespace}.{name}"
         if name in {"search", "read", "symbol", "run"}:
             return f"ckk.{name}"
         if name == "send":
             return "whatsapp.send"
+        if name == "publish":
+            return "research.publish"
         return name
 
     def execute(
@@ -145,6 +161,8 @@ class SealedResearchToolRegistry:
                 arguments["seed"], operators=arguments["operators"], controls=arguments["controls"],
                 budgets=arguments["budgets"], ref=arguments.get("ref"),
             )
+        elif logical == "research.publish":
+            result = self.ckk.publish(arguments["run_id"])
         elif logical == "whatsapp.send":
             if not reply_to or not service_available:
                 raise PermissionError("whatsapp.send unavailable outside an admitted service window")
@@ -186,6 +204,8 @@ class SealedResearchToolRegistry:
                 "controls": list(arguments.get("controls") or []), "budgets": dict(arguments.get("budgets") or {}),
                 "ref": arguments.get("ref"),
             }
+        if logical == "research.publish":
+            return {"run_id": str(arguments.get("run_id", ""))[:32]}
         return {"text_length": len(str(arguments.get("text", "")))}
 
     @staticmethod

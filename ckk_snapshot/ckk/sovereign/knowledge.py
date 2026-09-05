@@ -125,6 +125,19 @@ class CKKKnowledgeClient:
         self._record_success(result)
         return result
 
+    def publish(self, run_id: str) -> dict[str, Any]:
+        if not re.fullmatch(r"[0-9a-f]{32}", str(run_id)):
+            raise ValueError("invalid CKK run ID")
+        result = self._request("/v1/publish", {"run_id": run_id})
+        required = {
+            "repository", "commit_sha", "paths", "operator_names", "run_id", "seed_hash",
+            "controls", "compute_limits", "publication_url", "classification", "controls_completed",
+        }
+        if not required.issubset(result) or result.get("run_id") != run_id:
+            raise ValueError("CKK publisher returned incomplete provenance")
+        self._record_success(result)
+        return result
+
     def _record_success(self, result: dict[str, Any]) -> None:
         self.last_commit_sha = str(result.get("commit_sha") or "") or self.last_commit_sha
         self.last_error_type = None

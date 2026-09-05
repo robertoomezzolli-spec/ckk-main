@@ -26,6 +26,10 @@
         reverse_proxy observatory:8090
     }
 
+    handle /research* {
+        reverse_proxy research-site:8060
+    }
+
     handle {
         respond 404
     }

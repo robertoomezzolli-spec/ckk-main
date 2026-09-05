@@ -41,6 +41,15 @@ class FakeCKK:
                 "compute_limits": budgets, "provenance": [{"operator": "op_close"}],
                 "artifact": "b/result.json", "source_kind": "GENERATED_RUN"}
 
+    def publish(self, run_id):
+        return {"repository": "https://github.com/robertoomezzolli-spec/ckk", "commit_sha": SHA,
+                "paths": [GRAMMAR, "ckk_snapshot/ckk/gen/expand.py"], "operator_names": ["op_close"],
+                "run_id": run_id, "seed_hash": "c" * 64, "controls": ["structural_identity"],
+                "compute_limits": {"levels": 1, "state_cap": 100, "derivation_cap": 1000,
+                                   "wall_seconds": 5, "memory_mb": 256},
+                "publication_url": f"https://example.test/research/{run_id}", "classification": "DIRECT",
+                "controls_completed": True, "status": "published", "source_kind": "GENERATED_RUN"}
+
 
 class ScriptedResponses:
     def __init__(self):
@@ -69,6 +78,33 @@ class ScriptedResponses:
         return SimpleNamespace(output=[], output_text=json.dumps(result))
 
 
+class ScriptedPublishingResponses:
+    def __init__(self):
+        self.calls = []
+        self.step = 0
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        scripts = [
+            SimpleNamespace(type="function_call", name="run", namespace="ckk", call_id="call-run",
+                            arguments=json.dumps({
+                                "seed": "SEED_R", "operators": [], "controls": ["structural_identity"],
+                                "budgets": {"levels": 1, "state_cap": 100, "derivation_cap": 1000,
+                                            "wall_seconds": 5, "memory_mb": 256}, "ref": None,
+                            })),
+            SimpleNamespace(type="function_call", name="publish", namespace="research", call_id="call-publish",
+                            arguments=json.dumps({"run_id": "b" * 32})),
+        ]
+        if self.step < len(scripts):
+            item = scripts[self.step]
+            self.step += 1
+            return SimpleNamespace(output=[item], output_text="")
+        result = {"short_verdict": "COMPLETED GENERATED RUN",
+                  "publication_url": f"https://example.test/research/{'b' * 32}",
+                  "run_id": "b" * 32, "commit_sha": SHA}
+        return SimpleNamespace(output=[], output_text=json.dumps(result))
+
+
 class CKKExecutionToolTests(unittest.TestCase):
     def test_production_cognition_receives_namespaced_registry_and_executes_tool_loop(self):
         responses = ScriptedResponses()
@@ -80,11 +116,12 @@ class CKKExecutionToolTests(unittest.TestCase):
         self.assertEqual([item["logical_name"] for item in outcome["trace"]["calls"]],
                          ["ckk.search", "ckk.read", "ckk.run"])
         first = responses.calls[0]
-        self.assertEqual([item["name"] for item in first["tools"]], ["whatsapp", "ckk"])
+        self.assertEqual([item["name"] for item in first["tools"]], ["whatsapp", "ckk", "research"])
         self.assertEqual([item["name"] for item in first["tools"][1]["tools"]],
                          ["search", "read", "symbol", "run"])
         self.assertIn("whatsapp.send", outcome["trace"]["capabilities"])
         self.assertIn("ckk.run", outcome["trace"]["capabilities"])
+        self.assertIn("research.publish", outcome["trace"]["capabilities"])
         self.assertEqual(first["parallel_tool_calls"], False)
         self.assertTrue(any(
             isinstance(item, dict) and item.get("type") == "function_call_output"
@@ -119,6 +156,28 @@ class CKKExecutionToolTests(unittest.TestCase):
         registry = SealedResearchToolRegistry(FakeCKK())
         with self.assertRaises(PermissionError):
             registry.execute("shell", {"command": "id"})
+
+    def test_research_publish_is_sealed_to_run_id(self):
+        registry = SealedResearchToolRegistry(FakeCKK())
+        result = registry.execute("publish", {"run_id": "b" * 32}, namespace="research")
+        self.assertEqual(result["publication_url"], f"https://example.test/research/{'b' * 32}")
+        self.assertEqual(registry.invocations[-1]["logical_name"], "research.publish")
+        definition = registry.definitions[-1]
+        self.assertEqual(definition["name"], "research")
+        self.assertEqual([item["name"] for item in definition["tools"]], ["publish"])
+
+    def test_production_cognition_executes_run_then_sealed_publish(self):
+        responses = ScriptedPublishingResponses()
+        brain = OpenAIResponsesCognition(
+            WhatsAppConfig("491701234567", "phone"), client=SimpleNamespace(responses=responses),
+            tool_registry=SealedResearchToolRegistry(FakeCKK()),
+        )
+        outcome = brain.publish_research("Run and publish one bounded experiment.")
+        self.assertEqual([item["logical_name"] for item in outcome["trace"]["calls"]],
+                         ["ckk.run", "research.publish"])
+        self.assertEqual(outcome["result"]["run_id"], "b" * 32)
+        self.assertEqual(outcome["trace"]["calls"][1]["status"], "published")
+        self.assertEqual(responses.calls[0]["tool_choice"], "required")
 
 
 if __name__ == "__main__":
