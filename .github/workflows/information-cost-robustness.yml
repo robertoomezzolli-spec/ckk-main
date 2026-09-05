@@ -1,0 +1,30 @@
+name: information-cost-robustness
+
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+    paths:
+      - experiments/information_cost_robustness_gate.py
+      - .github/workflows/information-cost-robustness.yml
+      - ckk_snapshot/ckk/gen/grammar.py
+      - ckk_snapshot/ckk/gen/expand.py
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run paired-source information cost robustness gate
+        run: python experiments/information_cost_robustness_gate.py
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: information-cost-robustness-result
+          path: results/information_cost_robustness_gate.json
+          if-no-files-found: error
