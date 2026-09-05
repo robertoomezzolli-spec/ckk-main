@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """Execution-only accelerator for the frozen closure plateau V2 preregistration.
 
-Scientific definitions, thresholds, fresh contexts, horizons and output logic remain
-in fresh_seed_closure_plateau_gate_v2.py unchanged. This file changes only how
-impossible binary operator candidates are skipped.
+All scientific definitions, thresholds, contexts, horizons and decision rules remain
+in fresh_seed_closure_plateau_gate_v2.py unchanged.
 
-Before the large run, the accelerator is required to match the original brute-force
-runner on a reference expansion for:
-- exact structural-state set,
-- exact unique derivation-event set with earliest level,
-- exact output first-seen levels,
-- cap status.
-If equivalence fails, no scientific result is emitted.
+This runner constructs the SAME structural transition graph without materializing
+millions of derivation records whose inputs have identical operator effects. Before
+running H=2..7 it must reproduce the brute-force runner exactly on a reference graph:
+structural states, first-seen levels, graph edges, op_fiber base->target pairs and cap
+status. Any mismatch aborts before a scientific result is produced.
 """
 from __future__ import annotations
 
 import json
+import math
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -27,230 +25,224 @@ import fresh_seed_fiber_jump_gate as V1  # noqa: E402
 import fresh_seed_closure_plateau_gate_v2 as V2  # noqa: E402
 
 G = V1.G
-Derivation = V1.Derivation
-ORIGINAL_EXPAND = V1.expand_with_seeds
-
 AUDIT_LEVELS = 4
 AUDIT_CAP = 20_000
-EXPECTED_BINARY = {"op_product", "op_fiber", "op_degenerate", "op_exclude"}
 
 
-def indexed_incremental_expand(seeds, levels, cap):
-    """Semantics-preserving structural expansion without impossible old-old scans.
+def _compat(s):
+    return (s.sym, s.bc, s.order, s.dual)
 
-    Deterministic old-old operator applications cannot create a state after the level
-    in which that same pair first coexisted. We therefore evaluate a binary pair only
-    when at least one operand is in the newest frontier. Applicability indexing uses
-    only predicates already present in grammar.py; every candidate is still evaluated
-    by the original Grammar operator.
+
+def _prod_effect(s):
+    return (s.dim, s.mult, s.occ)
+
+
+def _fiber_base_effect(s):
+    # op_fiber output does not depend on base.kind or base.occ.
+    return (s.dim, s.mult)
+
+
+def _fiber_effect(s):
+    # op_fiber output does not depend on fiber.dim.
+    return (s.mult, s.occ)
+
+
+def expand_graph_direct(seeds, levels, cap):
+    """Return structural pool, first_seen, edges, fiber base-target pairs, event count.
+
+    Exact state-pair derivations are counted analytically where outputs are identical;
+    structural edges are inserted for every participating structural input state.
     """
-    binary_names = {op.__name__ for op in G.BINARY}
-    if binary_names != EXPECTED_BINARY:
-        raise RuntimeError(
-            f"Grammar binary operator set changed: {sorted(binary_names)} != {sorted(EXPECTED_BINARY)}"
-        )
-
     identity = lambda s: s.structural_sig()
     pool = {identity(s): s for s in seeds}
     frontier = dict(pool)
-    derivations = []
+    first_seen = {identity(s): 0 for s in seeds}
+    edges = set()
+    fiber_pairs = set()
+    unique_event_count = 0
     cap_hit = False
 
-    for lvl in range(levels):
+    for lvl0 in range(levels):
         if not frontier:
             break
-
+        lvl = lvl0 + 1
         items = list(pool.values())
-        frontier_items = list(frontier.values())
         frontier_ids = set(frontier)
-        old_items = [s for s in items if identity(s) not in frontier_ids]
+        frontier_items = list(frontier.values())
         new = {}
 
-        def record(op, inputs, r):
+        def install(r, input_sigs):
+            nonlocal unique_event_count
             if not r:
-                return
-            ins = tuple(identity(x) for x in inputs)
+                return None
             z = identity(r)
-            if z in ins:
-                return
-            derivations.append(Derivation(op.__name__, ins, z, lvl + 1))
+            if z in input_sigs:
+                return None
+            unique_event_count += 1
+            for u in set(input_sigs):
+                if u != z:
+                    edges.add((u, z))
             if z not in pool and z not in new:
                 new[z] = r
+                first_seen[z] = lvl
+            return z
 
-        # Unary deterministic operators: only a newly entered state needs evaluation.
+        # Unary events: each structural state is evaluated once, when first seen.
         for s in frontier_items:
+            a = identity(s)
             for op in G.UNARY:
                 r = op(s)
-                if not r:
-                    continue
-                a, z = identity(s), identity(r)
-                if a == z:
-                    continue
-                derivations.append(Derivation(op.__name__, (a,), z, lvl + 1))
-                if z not in pool and z not in new:
-                    new[z] = r
+                install(r, (a,))
 
-        def compat_key(s):
-            return (s.sym, s.bc, s.order, s.dual)
-
-        all_keyed = defaultdict(list)
-        front_keyed = defaultdict(list)
-        old_keyed = defaultdict(list)
+        # ---------- op_product ----------
+        # Bucket states by the exact fields that determine a product output.
+        # Within one compatibility class, kind CYCLE vs PRODUCT does not affect output.
+        prod_all = defaultdict(lambda: defaultdict(list))
+        prod_front_n = defaultdict(lambda: defaultdict(int))
         for s in items:
-            if s.kind in (G.CYCLE, G.PRODUCT, G.BOUNDARY):
-                all_keyed[compat_key(s)].append(s)
-        for s in frontier_items:
-            if s.kind in (G.CYCLE, G.PRODUCT, G.BOUNDARY):
-                front_keyed[compat_key(s)].append(s)
-        for s in old_items:
-            if s.kind in (G.CYCLE, G.PRODUCT, G.BOUNDARY):
-                old_keyed[compat_key(s)].append(s)
+            if s.kind in (G.CYCLE, G.PRODUCT):
+                k, e = _compat(s), _prod_effect(s)
+                prod_all[k][e].append(s)
+                if identity(s) in frontier_ids:
+                    prod_front_n[k][e] += 1
 
-        # op_product is commutative at derivation identity. Enumerate compatible
-        # pairs with >=1 frontier member, canonicalized once per level.
-        seen_product = set()
-        for key, fgroup in front_keyed.items():
-            all_prod = [s for s in all_keyed[key] if s.kind in (G.CYCLE, G.PRODUCT)]
-            front_prod = [s for s in fgroup if s.kind in (G.CYCLE, G.PRODUCT)]
-            for a in front_prod:
-                for b in all_prod:
-                    sa, sb = identity(a), identity(b)
-                    pair = tuple(sorted((sa, sb)))
-                    if pair in seen_product:
+        for k, buckets in prod_all.items():
+            effects = list(buckets)
+            for i, e1 in enumerate(effects):
+                b1 = buckets[e1]
+                f1 = prod_front_n[k].get(e1, 0)
+                for j in range(i, len(effects)):
+                    e2 = effects[j]
+                    b2 = buckets[e2]
+                    f2 = prod_front_n[k].get(e2, 0)
+                    if f1 == 0 and f2 == 0:
                         continue
-                    seen_product.add(pair)
-                    record(G.op_product, (a, b), G.op_product(a, b))
+                    r = G.op_product(b1[0], b2[0])
+                    if not r:
+                        continue
+                    z = identity(r)
+                    # Product output cannot equal a positive-dimensional CYCLE/PRODUCT
+                    # input under this grammar, but keep the structural guard explicit.
+                    if z in (identity(b1[0]), identity(b2[0])):
+                        continue
+                    if z not in pool and z not in new:
+                        new[z] = r
+                        first_seen[z] = lvl
+                    for s in b1:
+                        edges.add((identity(s), z))
+                    for s in b2:
+                        edges.add((identity(s), z))
 
-        # op_fiber is directed. Evaluate frontier-base x all-fiber plus
-        # old-base x frontier-fiber, with exact Grammar compatibility key.
-        for key in set(all_keyed):
-            all_fibers = [s for s in all_keyed[key] if s.kind == G.CYCLE]
-            front_fibers = [s for s in front_keyed.get(key, ()) if s.kind == G.CYCLE]
-            front_bases = [
-                s for s in front_keyed.get(key, ())
-                if s.kind in (G.CYCLE, G.PRODUCT, G.BOUNDARY)
-            ]
-            old_bases = [
-                s for s in old_keyed.get(key, ())
-                if s.kind in (G.CYCLE, G.PRODUCT, G.BOUNDARY)
-            ]
-            for base in front_bases:
-                for fib in all_fibers:
-                    record(G.op_fiber, (base, fib), G.op_fiber(base, fib))
-            for base in old_bases:
-                for fib in front_fibers:
-                    record(G.op_fiber, (base, fib), G.op_fiber(base, fib))
+                    n1, n2 = len(b1), len(b2)
+                    if i == j:
+                        old = n1 - f1
+                        # unordered exact input pairs with replacement, minus old-old
+                        unique_event_count += n1 * (n1 + 1) // 2 - old * (old + 1) // 2
+                    else:
+                        old1, old2 = n1 - f1, n2 - f2
+                        unique_event_count += n1 * n2 - old1 * old2
 
-        # op_degenerate(s, sym): antiunitary SYMMETRY second input only.
+        # ---------- op_fiber ----------
+        # Group bases/fibers only by fields that actually alter the BUNDLE output.
+        base_all = defaultdict(lambda: defaultdict(list))
+        base_front_n = defaultdict(lambda: defaultdict(int))
+        fib_all = defaultdict(lambda: defaultdict(list))
+        fib_front_n = defaultdict(lambda: defaultdict(int))
+        for s in items:
+            k = _compat(s)
+            sig = identity(s)
+            if s.kind in (G.CYCLE, G.PRODUCT, G.BOUNDARY):
+                e = _fiber_base_effect(s)
+                base_all[k][e].append(s)
+                if sig in frontier_ids:
+                    base_front_n[k][e] += 1
+            if s.kind == G.CYCLE:
+                e = _fiber_effect(s)
+                fib_all[k][e].append(s)
+                if sig in frontier_ids:
+                    fib_front_n[k][e] += 1
+
+        for k in set(base_all) & set(fib_all):
+            for be, bases in base_all[k].items():
+                fb = base_front_n[k].get(be, 0)
+                for fe, fibs in fib_all[k].items():
+                    ff = fib_front_n[k].get(fe, 0)
+                    if fb == 0 and ff == 0:
+                        continue
+                    r = G.op_fiber(bases[0], fibs[0])
+                    if not r:
+                        continue
+                    z = identity(r)
+                    if z not in pool and z not in new:
+                        new[z] = r
+                        first_seen[z] = lvl
+                    for base in bases:
+                        bs = identity(base)
+                        edges.add((bs, z))
+                        fiber_pairs.add((bs, z))
+                    for fib in fibs:
+                        edges.add((identity(fib), z))
+                    old_b, old_f = len(bases) - fb, len(fibs) - ff
+                    # Directed base,fiber applications with >=1 newly seen operand.
+                    unique_event_count += len(bases) * len(fibs) - old_b * old_f
+
+        # ---------- op_degenerate ----------
         all_anti = [s for s in items if s.kind == G.SYMMETRY and s.anti]
-        front_anti = [s for s in frontier_items if s.kind == G.SYMMETRY and s.anti]
-        front_deg = [
-            s for s in frontier_items
+        front_anti = [s for s in all_anti if identity(s) in frontier_ids]
+        all_deg = [
+            s for s in items
             if s.kind in (G.CYCLE, G.PRODUCT, G.BUNDLE, G.WEIGHT) and s.mult == 1
         ]
-        old_deg = [
-            s for s in old_items
-            if s.kind in (G.CYCLE, G.PRODUCT, G.BUNDLE, G.WEIGHT) and s.mult == 1
-        ]
+        front_deg = [s for s in all_deg if identity(s) in frontier_ids]
+        old_deg = [s for s in all_deg if identity(s) not in frontier_ids]
         for base in front_deg:
             for sym in all_anti:
-                record(G.op_degenerate, (base, sym), G.op_degenerate(base, sym))
+                install(G.op_degenerate(base, sym), (identity(base), identity(sym)))
         for base in old_deg:
             for sym in front_anti:
-                record(G.op_degenerate, (base, sym), G.op_degenerate(base, sym))
+                install(G.op_degenerate(base, sym), (identity(base), identity(sym)))
 
-        # op_exclude(s, carrier): CARRIER second input, occ-free base only.
+        # ---------- op_exclude ----------
         all_carriers = [s for s in items if s.kind == G.CARRIER]
-        front_carriers = [s for s in frontier_items if s.kind == G.CARRIER]
-        front_excl = [
-            s for s in frontier_items
+        front_carriers = [s for s in all_carriers if identity(s) in frontier_ids]
+        all_excl = [
+            s for s in items
             if s.kind in (G.CYCLE, G.PRODUCT, G.BUNDLE, G.INTEGER, G.WEIGHT)
             and s.occ is None
         ]
-        old_excl = [
-            s for s in old_items
-            if s.kind in (G.CYCLE, G.PRODUCT, G.BUNDLE, G.INTEGER, G.WEIGHT)
-            and s.occ is None
-        ]
+        front_excl = [s for s in all_excl if identity(s) in frontier_ids]
+        old_excl = [s for s in all_excl if identity(s) not in frontier_ids]
         for base in front_excl:
             for carrier in all_carriers:
-                record(G.op_exclude, (base, carrier), G.op_exclude(base, carrier))
+                install(G.op_exclude(base, carrier), (identity(base), identity(carrier)))
         for base in old_excl:
             for carrier in front_carriers:
-                record(G.op_exclude, (base, carrier), G.op_exclude(base, carrier))
+                install(G.op_exclude(base, carrier), (identity(base), identity(carrier)))
 
         pool.update(new)
         frontier = new
-        # Exactly the original level-boundary cap semantics.
+        print(
+            f"DIRECT_EXPAND level={lvl} states={len(pool)} frontier={len(frontier)} "
+            f"edges={len(edges)} events={unique_event_count}",
+            flush=True,
+        )
+        # Preserve the frozen experiment's level-boundary cap semantics.
         if len(pool) > cap:
             cap_hit = True
             break
 
-    return pool, derivations, cap_hit
+    return {
+        "pool": pool,
+        "first_seen": first_seen,
+        "edges": edges,
+        "fiber_pairs": fiber_pairs,
+        "cap_hit": cap_hit,
+        "derivations": unique_event_count,
+    }
 
 
-def earliest_events(derivs):
-    out = {}
-    for d in derivs:
-        k = d.event_key()
-        out[k] = min(out.get(k, d.level), d.level)
-    return out
-
-
-def output_first_seen(seeds, derivs):
-    out = {s.structural_sig(): 0 for s in seeds}
-    for d in derivs:
-        out[d.output] = min(out.get(d.output, d.level), d.level)
-    return out
-
-
-def prove_equivalence():
-    reports = {}
-    for occ in V2.FRESH_OCC:
-        seeds = V1.fresh_seeds(occ)
-        old_pool, old_derivs, old_cap = ORIGINAL_EXPAND(
-            seeds, levels=AUDIT_LEVELS, cap=AUDIT_CAP
-        )
-        new_pool, new_derivs, new_cap = indexed_incremental_expand(
-            seeds, levels=AUDIT_LEVELS, cap=AUDIT_CAP
-        )
-        report = {
-            "levels": AUDIT_LEVELS,
-            "cap": AUDIT_CAP,
-            "old_states": len(old_pool),
-            "new_states": len(new_pool),
-            "old_unique_events": len(earliest_events(old_derivs)),
-            "new_unique_events": len(earliest_events(new_derivs)),
-            "state_set_equal": set(old_pool) == set(new_pool),
-            "earliest_event_map_equal": earliest_events(old_derivs) == earliest_events(new_derivs),
-            "output_first_seen_equal": output_first_seen(seeds, old_derivs) == output_first_seen(seeds, new_derivs),
-            "cap_status_equal": old_cap == new_cap,
-        }
-        report["pass"] = all(
-            report[k]
-            for k in (
-                "state_set_equal",
-                "earliest_event_map_equal",
-                "output_first_seen_equal",
-                "cap_status_equal",
-            )
-        )
-        reports[str(occ)] = report
-        if not report["pass"]:
-            raise RuntimeError(
-                "Indexed runner failed brute-force equivalence proof: "
-                + json.dumps({"occ": occ, **report}, sort_keys=True)
-            )
-        print("EXPANSION_EQUIVALENCE_PASS", occ, json.dumps(report, sort_keys=True), flush=True)
-    return reports
-
-
-def build_graph_fast(occ: int):
-    # Reproduce V2.build_graph exactly, replacing only its expander.
-    seeds = V1.fresh_seeds(occ)
-    pool, derivs, cap_hit = indexed_incremental_expand(
-        seeds, levels=V2.LEVELS, cap=V2.CAP
-    )
+def brute_reference(seeds, levels, cap):
+    pool, derivs, cap_hit = V1.expand_with_seeds(seeds, levels=levels, cap=cap)
     states = {s.structural_sig(): s for s in pool.values()}
     first_seen = {s.structural_sig(): 0 for s in seeds if s.structural_sig() in states}
     unique = {}
@@ -259,18 +251,72 @@ def build_graph_fast(occ: int):
             continue
         first_seen[d.output] = min(first_seen.get(d.output, d.level), d.level)
         unique.setdefault(d.event_key(), d)
-
     edges = set()
+    fiber_pairs = set()
     for d in unique.values():
         for u in set(d.inputs):
             if u in states and u != d.output:
                 edges.add((u, d.output))
+        if d.operator == "op_fiber" and len(d.inputs) == 2:
+            base, fib = d.inputs
+            if base in states and fib in states and d.output in states and states[fib].kind == G.CYCLE:
+                if states[base].kind in (G.BOUNDARY, G.CYCLE, G.PRODUCT):
+                    fiber_pairs.add((base, d.output))
+    return {
+        "pool": pool,
+        "first_seen": first_seen,
+        "edges": edges,
+        "fiber_pairs": fiber_pairs,
+        "cap_hit": cap_hit,
+        "derivations": len(unique),
+    }
 
+
+def prove_equivalence():
+    reports = {}
+    for occ in V2.FRESH_OCC:
+        seeds = V1.fresh_seeds(occ)
+        old = brute_reference(seeds, AUDIT_LEVELS, AUDIT_CAP)
+        new = expand_graph_direct(seeds, AUDIT_LEVELS, AUDIT_CAP)
+        report = {
+            "levels": AUDIT_LEVELS,
+            "cap": AUDIT_CAP,
+            "states": len(old["pool"]),
+            "old_unique_events": old["derivations"],
+            "new_unique_events": new["derivations"],
+            "state_set_equal": set(old["pool"]) == set(new["pool"]),
+            "first_seen_equal": old["first_seen"] == new["first_seen"],
+            "edge_set_equal": old["edges"] == new["edges"],
+            "fiber_pair_set_equal": old["fiber_pairs"] == new["fiber_pairs"],
+            "unique_event_count_equal": old["derivations"] == new["derivations"],
+            "cap_status_equal": old["cap_hit"] == new["cap_hit"],
+        }
+        report["pass"] = all(
+            report[k]
+            for k in (
+                "state_set_equal", "first_seen_equal", "edge_set_equal",
+                "fiber_pair_set_equal", "unique_event_count_equal", "cap_status_equal"
+            )
+        )
+        reports[str(occ)] = report
+        if not report["pass"]:
+            raise RuntimeError(
+                "Direct runner failed brute-force equivalence proof: "
+                + json.dumps({"occ": occ, **report}, sort_keys=True)
+            )
+        print("DIRECT_EQUIVALENCE_PASS", occ, json.dumps(report, sort_keys=True), flush=True)
+    return reports
+
+
+def finish_graph(raw):
+    states = {s.structural_sig(): s for s in raw["pool"].values()}
+    edges = raw["edges"]
     adj = defaultdict(set)
     rev = defaultdict(set)
     for u, v in edges:
-        adj[u].add(v)
-        rev[v].add(u)
+        if u in states and v in states:
+            adj[u].add(v)
+            rev[v].add(u)
 
     sys.setrecursionlimit(max(100000, len(states) * 4))
     seen = set()
@@ -305,39 +351,38 @@ def build_graph_fast(occ: int):
 
     crev = defaultdict(set)
     for u, v in edges:
+        if u not in comp or v not in comp:
+            continue
         cu, cv = comp[u], comp[v]
         if cu != cv:
             crev[cv].add(cu)
 
     fiber_targets = defaultdict(set)
-    for d in unique.values():
-        if d.operator != "op_fiber" or len(d.inputs) != 2:
+    for base, target in raw["fiber_pairs"]:
+        if base not in states or target not in states:
             continue
-        base, fib = d.inputs
-        if base not in states or fib not in states or d.output not in states:
-            continue
-        if states[fib].kind != G.CYCLE:
-            continue
-        kind = states[base].kind
-        if kind not in (G.BOUNDARY, G.CYCLE, G.PRODUCT):
-            continue
-        cb, ct = comp[base], comp[d.output]
+        cb, ct = comp[base], comp[target]
         if cb != ct:
-            fiber_targets[(cb, kind)].add(ct)
+            fiber_targets[(cb, states[base].kind)].add(ct)
 
     return {
         "states": states,
-        "first_seen": first_seen,
+        "first_seen": raw["first_seen"],
         "adj": adj,
         "crev": crev,
         "members": members,
         "comp": comp,
         "fiber_targets": fiber_targets,
-        "cap_hit": cap_hit,
-        "derivations": len(unique),
+        "cap_hit": raw["cap_hit"],
+        "derivations": raw["derivations"],
         "edges": len(edges),
         "sccs": len(members),
     }
+
+
+def build_graph_fast(occ: int):
+    raw = expand_graph_direct(V1.fresh_seeds(occ), V2.LEVELS, V2.CAP)
+    return finish_graph(raw)
 
 
 def main():
@@ -345,12 +390,11 @@ def main():
     V2.build_graph = build_graph_fast
     V2.main()
 
-    # Execution provenance only; scientific fields produced by V2 are untouched.
     data = json.loads(V2.OUT.read_text())
-    data["runner"] = "indexed_incremental_after_bruteforce_equivalence_check"
+    data["runner"] = "aggregated_structural_graph_after_exact_bruteforce_equivalence_check"
     data["runner_equivalence"] = equivalence
     V2.OUT.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
-    print("INDEXED_V2_COMPLETE", flush=True)
+    print("DIRECT_V2_COMPLETE", flush=True)
 
 
 if __name__ == "__main__":
