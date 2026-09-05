@@ -1,0 +1,24 @@
+name: projected-closure-sampling
+on:
+  push:
+    branches: [experiment/solar-system-provenance-cascade]
+    paths:
+      - 'experiments/projected_closure_sampling_test.py'
+      - '.github/workflows/projected-closure-sampling.yml'
+  workflow_dispatch:
+jobs:
+  projected-closure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run projected closure sampling test
+        run: python experiments/projected_closure_sampling_test.py
+      - name: Show result
+        run: cat results/projected_closure_sampling.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: projected-closure-sampling-result
+          path: results/projected_closure_sampling.json
