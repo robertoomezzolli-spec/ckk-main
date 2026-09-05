@@ -1,0 +1,24 @@
+name: CKK blind CYCLE audit
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+  workflow_dispatch:
+
+jobs:
+  stage-a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run physics-blind Stage A
+        run: python experiments/cycle_2pi_blind_audit.py
+      - name: Show result
+        run: cat results/cycle_2pi_blind/stage_a_kernel.json
+      - name: Upload Stage A artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cycle-2pi-stage-a
+          path: results/cycle_2pi_blind/stage_a_kernel.json
