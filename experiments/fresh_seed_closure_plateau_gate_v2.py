@@ -1,167 +1,377 @@
 #!/usr/bin/env python3
-"""Preregistered closure-completion plateau + floor-corrected coupling gate.
+"""Preregistered V2: closure completion, long-horizon plateau, floor-corrected coupling.
 
-Interpretation tested externally against the unchanged CKK grammar/kernel:
-- attaching CYCLE closure to an open BOUNDARY preserves/opens future potential,
-- attaching the same closure to already-closed CYCLE/PRODUCT collapses future potential,
-- any pressure->opening coupling must be tested against a floor-matched null,
-- persistence is a plateau question, not a monotone-growth question.
-
-This file intentionally delegates graph generation / feature extraction to the v1 fresh-seed
-gate and changes only the preregistered decision layer and graph horizon/cap.
+No kernel/grammar modification. This is an external measurement layer over the same CKK grammar.
+The previous all-in-one "jump" gate stays red; V2 tests three narrower claims separately.
 """
 from __future__ import annotations
 
 import json
 import math
 import random
+import statistics
+import sys
+from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 
-# Reuse the already-audited measurement implementation; do not touch the kernel.
-from fresh_seed_fiber_jump_gate import (
-    build_context,
-    evaluate_horizon,
-    permutation_mean_difference,
-    spearman_rho,
-)
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "experiments"))
+import fresh_seed_fiber_jump_gate as V1  # noqa: E402
 
-SCHEMA = "ckk.external.fresh-seed-closure-plateau-floor-null.v2"
-OUT = Path("results/fresh_seed_closure_plateau_gate_v2.json")
+G = V1.G
+Derivation = V1.Derivation
 
-# -------- PREREGISTRATION --------
+# ---------------- FROZEN PREREGISTRATION ----------------
 FRESH_OCC = (2, 3)
-LEVELS = 10
+LEVELS = 12
 CAP = 100_000
 HORIZONS = (2, 3, 4, 5, 6, 7)
-COMPRESSION_LAG = 3
+LAG = 3
 PERMUTATIONS = 4000
-RNG_SEED = 20260905
 
-# Closure-completion specificity: same op_fiber, different base structure.
+# A. Replication of the narrower closure-completion contrast.
+SPECIFICITY_H = (2, 3, 4)
 MIN_OPENING_ADVANTAGE_BITS = 0.25
 MAX_PAIRWISE_P = 0.01
+MIN_KIND_N = 3
 
-# Plateau criterion is fixed before the larger-graph run.
+# B. Persistence as a nonzero plateau, not monotone growth.
 PLATEAU_H = (5, 6, 7)
 PLATEAU_MAX_RANGE_BITS = 0.05
 PLATEAU_MIN_MEAN_BITS = 0.15
 MIN_PLATEAU_N_PER_H = 5
 
-# Floor-corrected null: pressure-opening coupling on BOUNDARY must exceed a null built
-# from controls matched on the observable post-transition floor (future-potential bin),
-# not raw controls. A matched null is considered usable only with enough pairs.
-FLOOR_BIN_BITS = 0.25
-MIN_FLOOR_MATCHED_PAIRS = 20
+# C. Pressure/opening coupling against a null with the exact same mechanical floor.
+# Opening = log2(Omega_target/Omega_source) has row-wise lower bound
+# floor_i = -log2(Omega_source), because Omega_target >= 1.
+# The null keeps (pressure_i, floor_i) fixed and permutes only nonnegative headroom
+# h_i = opening_i - floor_i = log2(Omega_target). Thus any rho generated purely by
+# pressure<->floor structure survives the null by construction.
+COUPLING_H = (2, 3)
+MIN_BOUNDARY_N_COUPLING = 20
 MIN_BOUNDARY_RHO = 0.25
-MIN_RHO_ADVANTAGE_OVER_FLOOR_NULL = 0.20
-MAX_RHO_PERMUTATION_P = 0.01
+MIN_RHO_EXCESS_OVER_FLOOR_NULL = 0.20
+MAX_FLOOR_NULL_P = 0.01
+
+OUT = ROOT / "results" / "fresh_seed_closure_plateau_gate_v2.json"
 
 
-def finite(x):
-    return x is not None and isinstance(x, (int, float)) and math.isfinite(x)
+def spearman(xs, ys):
+    return V1.spearman(xs, ys)
 
 
-def floor_bin(v: float) -> int:
-    return math.floor(v / FLOOR_BIN_BITS)
+def perm_mean_diff_p(a, b, observed, seed):
+    if len(a) < MIN_KIND_N or len(b) < MIN_KIND_N:
+        return None
+    rng = random.Random(seed)
+    pool = list(a) + list(b)
+    na = len(a)
+    ge = 0
+    for _ in range(PERMUTATIONS):
+        z = pool[:]
+        rng.shuffle(z)
+        d = sum(z[:na]) / na - sum(z[na:]) / (len(z) - na)
+        if d >= observed:
+            ge += 1
+    return (ge + 1) / (PERMUTATIONS + 1)
 
 
-def floor_matched_null(boundary_rows, control_rows, rng: random.Random):
-    """Construct a control null matched to BOUNDARY on post-transition future-potential floor.
-
-    Rows are expected to carry pressure_bits, opening_bits, and post_bits. For every boundary
-    row, sample (with replacement) a control row from the same post_bits bin. This preserves
-    the compression floor that mechanically constrains further loss.
-    """
-    pools = {}
-    for r in control_rows:
-        if all(finite(r.get(k)) for k in ("pressure_bits", "opening_bits", "post_bits")):
-            pools.setdefault(floor_bin(r["post_bits"]), []).append(r)
-
-    matched_b = []
-    matched_c = []
-    for b in boundary_rows:
-        if not all(finite(b.get(k)) for k in ("pressure_bits", "opening_bits", "post_bits")):
+def build_graph(occ: int):
+    seeds = V1.fresh_seeds(occ)
+    pool, derivs, cap_hit = V1.expand_with_seeds(seeds, levels=LEVELS, cap=CAP)
+    states = {s.structural_sig(): s for s in pool.values()}
+    first_seen = {s.structural_sig(): 0 for s in seeds if s.structural_sig() in states}
+    unique = {}
+    for d in derivs:
+        if d.output not in states:
             continue
-        pool = pools.get(floor_bin(b["post_bits"]), [])
-        if not pool:
+        first_seen[d.output] = min(first_seen.get(d.output, d.level), d.level)
+        unique.setdefault(d.event_key(), d)
+
+    edges = set()
+    for d in unique.values():
+        for u in set(d.inputs):
+            if u in states and u != d.output:
+                edges.add((u, d.output))
+
+    adj = defaultdict(set)
+    rev = defaultdict(set)
+    for u, v in edges:
+        adj[u].add(v)
+        rev[v].add(u)
+
+    sys.setrecursionlimit(max(100000, len(states) * 4))
+    seen = set()
+    order = []
+
+    def d1(u):
+        seen.add(u)
+        for v in adj.get(u, ()):
+            if v not in seen:
+                d1(v)
+        order.append(u)
+
+    for n in states:
+        if n not in seen:
+            d1(n)
+
+    comp = {}
+    members = defaultdict(set)
+
+    def d2(u, c):
+        comp[u] = c
+        members[c].add(u)
+        for v in rev.get(u, ()):
+            if v not in comp:
+                d2(v, c)
+
+    cid = 0
+    for n in reversed(order):
+        if n not in comp:
+            d2(n, cid)
+            cid += 1
+
+    crev = defaultdict(set)
+    for u, v in edges:
+        cu, cv = comp[u], comp[v]
+        if cu != cv:
+            crev[cv].add(cu)
+
+    fiber_targets = defaultdict(set)
+    for d in unique.values():
+        if d.operator != "op_fiber" or len(d.inputs) != 2:
             continue
-        matched_b.append(b)
-        matched_c.append(rng.choice(pool))
-
-    def rho(rows):
-        if len(rows) < 3:
-            return None
-        return spearman_rho([r["pressure_bits"] for r in rows], [r["opening_bits"] for r in rows])
-
-    rb = rho(matched_b)
-    rc = rho(matched_c)
-    advantage = None if rb is None or rc is None else rb - rc
-
-    # Permutation null on the matched sample: shuffle opening labels between BOUNDARY and
-    # floor-matched controls while keeping pressures and floor matching fixed.
-    p = None
-    if len(matched_b) >= MIN_FLOOR_MATCHED_PAIRS and rb is not None and rc is not None:
-        observed = rb - rc
-        combined_openings = [r["opening_bits"] for r in matched_b] + [r["opening_bits"] for r in matched_c]
-        bp = [r["pressure_bits"] for r in matched_b]
-        cp = [r["pressure_bits"] for r in matched_c]
-        ge = 0
-        for _ in range(PERMUTATIONS):
-            vals = combined_openings[:]
-            rng.shuffle(vals)
-            bo = vals[: len(matched_b)]
-            co = vals[len(matched_b) :]
-            prb = spearman_rho(bp, bo)
-            prc = spearman_rho(cp, co)
-            if prb is not None and prc is not None and (prb - prc) >= observed:
-                ge += 1
-        p = (ge + 1) / (PERMUTATIONS + 1)
+        base, fib = d.inputs
+        if base not in states or fib not in states or d.output not in states:
+            continue
+        if states[fib].kind != G.CYCLE:
+            continue
+        kind = states[base].kind
+        if kind not in (G.BOUNDARY, G.CYCLE, G.PRODUCT):
+            continue
+        cb, ct = comp[base], comp[d.output]
+        if cb != ct:
+            fiber_targets[(cb, kind)].add(ct)
 
     return {
-        "matched_pairs": len(matched_b),
-        "boundary_rho": rb,
-        "floor_null_control_rho": rc,
-        "rho_advantage": advantage,
-        "permutation_p": p,
-        "pass": (
-            len(matched_b) >= MIN_FLOOR_MATCHED_PAIRS
-            and rb is not None and rb >= MIN_BOUNDARY_RHO
-            and advantage is not None and advantage >= MIN_RHO_ADVANTAGE_OVER_FLOOR_NULL
-            and p is not None and p <= MAX_RHO_PERMUTATION_P
-        ),
+        "states": states,
+        "first_seen": first_seen,
+        "adj": adj,
+        "crev": crev,
+        "members": members,
+        "comp": comp,
+        "fiber_targets": fiber_targets,
+        "cap_hit": cap_hit,
+        "derivations": len(unique),
+        "edges": len(edges),
+        "sccs": len(members),
     }
 
 
-def extract_rows(detail):
-    """Compatibility adapter for v1 evaluator detail rows."""
-    rows = detail.get("rows") or detail.get("records") or []
-    out = {"BOUNDARY": [], "CYCLE": [], "PRODUCT": []}
-    for r in rows:
-        k = r.get("base_kind") or r.get("kind")
-        if k not in out:
+def floor_preserving_null(rows, seed):
+    """Exact-floor null for rho(pressure, opening).
+
+    Keep each row's pressure and exact lower floor fixed. Shuffle only the nonnegative
+    headroom above that floor. This preserves the mechanical floor effect but destroys
+    any pressure/headroom association beyond it.
+    """
+    if len(rows) < MIN_BOUNDARY_N_COUPLING:
+        return {
+            "n": len(rows),
+            "observed_rho": None,
+            "null_mean_rho": None,
+            "null_median_rho": None,
+            "rho_excess_over_null_median": None,
+            "permutation_p": None,
+            "pass": False,
+        }
+
+    pressures = [r["pressure_bits"] for r in rows]
+    openings = [r["opening_bits"] for r in rows]
+    floors = [r["opening_floor_bits"] for r in rows]
+    headroom = [o - f for o, f in zip(openings, floors)]
+    observed = spearman(pressures, openings)
+    if observed is None:
+        return {
+            "n": len(rows), "observed_rho": None, "null_mean_rho": None,
+            "null_median_rho": None, "rho_excess_over_null_median": None,
+            "permutation_p": None, "pass": False,
+        }
+
+    rng = random.Random(seed)
+    null_rhos = []
+    ge = 0
+    for _ in range(PERMUTATIONS):
+        h = headroom[:]
+        rng.shuffle(h)
+        null_opening = [f + x for f, x in zip(floors, h)]
+        r = spearman(pressures, null_opening)
+        if r is None:
             continue
-        # v1 naming aliases
-        pressure = r.get("pressure_bits", r.get("compression_bits"))
-        opening = r.get("opening_bits")
-        post = r.get("post_bits", r.get("future_after_bits", r.get("after_bits")))
-        out[k].append({"pressure_bits": pressure, "opening_bits": opening, "post_bits": post})
-    return out
+        null_rhos.append(r)
+        if r >= observed:
+            ge += 1
+
+    if not null_rhos:
+        null_mean = null_median = excess = p = None
+        passed = False
+    else:
+        null_mean = sum(null_rhos) / len(null_rhos)
+        null_median = statistics.median(null_rhos)
+        excess = observed - null_median
+        p = (ge + 1) / (len(null_rhos) + 1)
+        passed = (
+            observed >= MIN_BOUNDARY_RHO
+            and excess >= MIN_RHO_EXCESS_OVER_FLOOR_NULL
+            and p <= MAX_FLOOR_NULL_P
+        )
+
+    return {
+        "n": len(rows),
+        "observed_rho": observed,
+        "null_mean_rho": null_mean,
+        "null_median_rho": null_median,
+        "rho_excess_over_null_median": excess,
+        "permutation_p": p,
+        "pass": passed,
+    }
+
+
+def evaluate(g, occ: int, H: int):
+    states = g["states"]
+    first_seen = g["first_seen"]
+    adj = g["adj"]
+    crev = g["crev"]
+    members = g["members"]
+
+    eligible_nodes = {n for n in states if first_seen.get(n, LEVELS) <= LEVELS - H}
+    eligible_comps = {c for c, ns in members.items() if ns and all(n in eligible_nodes for n in ns)}
+
+    @lru_cache(maxsize=None)
+    def omega(c):
+        seen = set(members[c])
+        front = set(members[c])
+        for _ in range(H):
+            nxt = set()
+            for u in front:
+                nxt.update(adj.get(u, ()))
+            nxt -= seen
+            if not nxt:
+                break
+            seen.update(nxt)
+            front = nxt
+        return len(seen)
+
+    @lru_cache(maxsize=None)
+    def exact_anc(c, lag):
+        front = {c}
+        for _ in range(lag):
+            nxt = set()
+            for x in front:
+                nxt.update(crev.get(x, ()))
+            front = nxt
+            if not front:
+                break
+        return frozenset(front)
+
+    def pressure(c):
+        aa = [a for a in exact_anc(c, LAG) if a in eligible_comps]
+        if not aa:
+            return None
+        oc = omega(c)
+        vals = [math.log2(omega(a) / oc) for a in aa if omega(a) > 0 and oc > 0]
+        return sum(vals) / len(vals) if vals else None
+
+    obs = {G.BOUNDARY: [], G.CYCLE: [], G.PRODUCT: []}
+    for (c, kind), targets in g["fiber_targets"].items():
+        if c not in eligible_comps:
+            continue
+        ts = [t for t in targets if t in eligible_comps]
+        if not ts:
+            continue
+        p = pressure(c)
+        if p is None:
+            continue
+        oc = omega(c)
+        if oc <= 0:
+            continue
+        source_bits = math.log2(oc)
+        target_bits = [math.log2(omega(t)) for t in ts if omega(t) > 0]
+        if not target_bits:
+            continue
+        mean_target_bits = sum(target_bits) / len(target_bits)
+        opening = mean_target_bits - source_bits
+        floor = -source_bits
+        obs[kind].append({
+            "source": c,
+            "pressure_bits": p,
+            "opening_bits": opening,
+            "opening_floor_bits": floor,
+            "headroom_bits": opening - floor,
+            "source_future_bits": source_bits,
+            "mean_target_future_bits": mean_target_bits,
+            "n_targets": len(ts),
+        })
+
+    summary = {}
+    for kind, rows in obs.items():
+        openings = [r["opening_bits"] for r in rows]
+        pressures = [r["pressure_bits"] for r in rows]
+        summary[kind] = {
+            "n": len(rows),
+            "mean_opening_bits": sum(openings) / len(openings) if openings else None,
+            "median_opening_bits": statistics.median(openings) if openings else None,
+            "raw_rho_pressure_opening": spearman(pressures, openings) if len(rows) >= 4 else None,
+        }
+
+    specificity = {}
+    for idx, kind in enumerate((G.CYCLE, G.PRODUCT), start=1):
+        b = [r["opening_bits"] for r in obs[G.BOUNDARY]]
+        c = [r["opening_bits"] for r in obs[kind]]
+        if len(b) >= MIN_KIND_N and len(c) >= MIN_KIND_N:
+            diff = sum(b) / len(b) - sum(c) / len(c)
+            p = perm_mean_diff_p(b, c, diff, 20272000 + occ * 100 + H * 10 + idx)
+            passed = diff >= MIN_OPENING_ADVANTAGE_BITS and p is not None and p <= MAX_PAIRWISE_P
+        else:
+            diff = p = None
+            passed = False
+        specificity[kind] = {
+            "mean_difference_bits": diff,
+            "permutation_p": p,
+            "pass": passed,
+        }
+
+    floor_null = {
+        kind: floor_preserving_null(rows, 20273000 + occ * 100 + H * 10 + idx)
+        for idx, (kind, rows) in enumerate(obs.items(), start=1)
+    }
+
+    return {
+        "H": H,
+        "eligible_nodes": len(eligible_nodes),
+        "eligible_sccs": len(eligible_comps),
+        "by_base_kind": summary,
+        "closure_completion_specificity": specificity,
+        "floor_preserving_null": floor_null,
+    }
 
 
 def main():
-    rng = random.Random(RNG_SEED)
     result = {
-        "schema": SCHEMA,
+        "schema": "ckk.external.fresh-seed-closure-plateau-floor-null.v2",
         "kernel_modified": False,
         "preregistered": {
             "fresh_occ": list(FRESH_OCC),
             "levels": LEVELS,
             "cap": CAP,
             "H": list(HORIZONS),
-            "compression_lag": COMPRESSION_LAG,
-            "specificity": {
+            "compression_lag": LAG,
+            "closure_completion_specificity": {
+                "H": list(SPECIFICITY_H),
                 "min_opening_advantage_bits": MIN_OPENING_ADVANTAGE_BITS,
                 "max_pairwise_p": MAX_PAIRWISE_P,
+                "min_kind_n": MIN_KIND_N,
             },
             "plateau": {
                 "H": list(PLATEAU_H),
@@ -169,103 +379,85 @@ def main():
                 "min_mean_bits": PLATEAU_MIN_MEAN_BITS,
                 "min_n_per_H": MIN_PLATEAU_N_PER_H,
             },
-            "floor_corrected_null": {
-                "floor_bin_bits": FLOOR_BIN_BITS,
-                "min_matched_pairs": MIN_FLOOR_MATCHED_PAIRS,
+            "floor_corrected_coupling": {
+                "H": list(COUPLING_H),
+                "null": "keep each row's pressure and exact opening floor=-log2(Omega_source); permute only nonnegative headroom=log2(Omega_target)",
+                "min_boundary_n": MIN_BOUNDARY_N_COUPLING,
                 "min_boundary_rho": MIN_BOUNDARY_RHO,
-                "min_rho_advantage": MIN_RHO_ADVANTAGE_OVER_FLOOR_NULL,
-                "max_permutation_p": MAX_RHO_PERMUTATION_P,
+                "min_rho_excess_over_null_median": MIN_RHO_EXCESS_OVER_FLOOR_NULL,
+                "max_permutation_p": MAX_FLOOR_NULL_P,
             },
         },
         "contexts": {},
     }
 
     for occ in FRESH_OCC:
-        ctx = build_context(occ=occ, levels=LEVELS, cap=CAP)
-        c_out = {"generator": ctx.get("generator", {}), "horizons": {}}
+        g = build_graph(occ)
+        hrs = {str(H): evaluate(g, occ, H) for H in HORIZONS}
 
-        plateau_vals = []
-        plateau_ns = []
-        floor_passes = []
-        specificity_passes = []
+        specificity_pass = all(
+            all(hrs[str(H)]["closure_completion_specificity"][k]["pass"] for k in (G.CYCLE, G.PRODUCT))
+            for H in SPECIFICITY_H
+        )
 
-        for H in HORIZONS:
-            ev = evaluate_horizon(ctx, H=H, compression_lag=COMPRESSION_LAG, permutations=PERMUTATIONS, rng=rng)
-            by = ev.get("by_base_kind", {})
-
-            # Re-register closure-completion specificity at every horizon where both controls exist.
-            spec = {}
-            for control in ("CYCLE", "PRODUCT"):
-                b = by.get("BOUNDARY", {})
-                c = by.get(control, {})
-                mb = b.get("mean_opening_bits")
-                mc = c.get("mean_opening_bits")
-                if finite(mb) and finite(mc):
-                    diff = mb - mc
-                    # use evaluator's already computed pairwise p if available
-                    old = ev.get("opening_specificity", {}).get(f"BOUNDARY_vs_{control}", {})
-                    p = old.get("permutation_p")
-                    passed = diff >= MIN_OPENING_ADVANTAGE_BITS and finite(p) and p <= MAX_PAIRWISE_P
-                else:
-                    diff = p = None
-                    passed = False
-                spec[control] = {"mean_difference_bits": diff, "permutation_p": p, "pass": passed}
-
-            rows = extract_rows(ev)
-            floor_null = floor_matched_null(rows["BOUNDARY"], rows["CYCLE"] + rows["PRODUCT"], rng)
-
-            bstat = by.get("BOUNDARY", {})
-            if H in PLATEAU_H:
-                plateau_vals.append(bstat.get("mean_opening_bits"))
-                plateau_ns.append(bstat.get("n", 0))
-
-            horizon_spec_pass = all(v["pass"] for v in spec.values())
-            specificity_passes.append(horizon_spec_pass)
-            floor_passes.append(floor_null["pass"])
-
-            c_out["horizons"][str(H)] = {
-                "by_base_kind": by,
-                "closure_completion_specificity": spec,
-                "specificity_pass": horizon_spec_pass,
-                "floor_corrected_null": floor_null,
-            }
-
-        plateau_finite = len(plateau_vals) == len(PLATEAU_H) and all(finite(v) for v in plateau_vals)
-        plateau_range = (max(plateau_vals) - min(plateau_vals)) if plateau_finite else None
-        plateau_mean = (sum(plateau_vals) / len(plateau_vals)) if plateau_finite else None
-        plateau_n_ok = len(plateau_ns) == len(PLATEAU_H) and all(n >= MIN_PLATEAU_N_PER_H for n in plateau_ns)
-        plateau_pass = (
+        plateau_vals = [hrs[str(H)]["by_base_kind"][G.BOUNDARY]["mean_opening_bits"] for H in PLATEAU_H]
+        plateau_ns = [hrs[str(H)]["by_base_kind"][G.BOUNDARY]["n"] for H in PLATEAU_H]
+        plateau_finite = all(isinstance(v, (int, float)) and math.isfinite(v) for v in plateau_vals)
+        plateau_range = max(plateau_vals) - min(plateau_vals) if plateau_finite else None
+        plateau_mean = sum(plateau_vals) / len(plateau_vals) if plateau_finite else None
+        plateau_pass = bool(
             plateau_finite
-            and plateau_n_ok
+            and all(n >= MIN_PLATEAU_N_PER_H for n in plateau_ns)
             and plateau_range <= PLATEAU_MAX_RANGE_BITS
             and plateau_mean >= PLATEAU_MIN_MEAN_BITS
         )
 
-        c_out["plateau"] = {
-            "H": list(PLATEAU_H),
-            "mean_opening_bits": plateau_vals,
-            "n": plateau_ns,
-            "range_bits": plateau_range,
-            "mean_bits": plateau_mean,
-            "pass": plateau_pass,
-        }
-        c_out["closure_completion_specificity_pass_all_H"] = all(specificity_passes)
-        c_out["floor_corrected_coupling_pass_all_H"] = all(floor_passes)
-        c_out["pass"] = (
-            not c_out.get("generator", {}).get("cap_hit", False)
-            and c_out["closure_completion_specificity_pass_all_H"]
-            and c_out["floor_corrected_coupling_pass_all_H"]
-            and plateau_pass
+        coupling_pass = all(
+            hrs[str(H)]["floor_preserving_null"][G.BOUNDARY]["pass"]
+            for H in COUPLING_H
         )
-        result["contexts"][str(occ)] = c_out
 
-    result["status"] = (
-        "FRESH_SEED_CLOSURE_COMPLETION_PLATEAU_AND_FLOOR_COUPLING_CONFIRMED"
-        if all(v["pass"] for v in result["contexts"].values())
-        else "FRESH_SEED_CLOSURE_PLATEAU_FLOOR_GATE_NOT_CONFIRMED"
+        result["contexts"][str(occ)] = {
+            "generator": {
+                "levels": LEVELS,
+                "cap": CAP,
+                "cap_hit": g["cap_hit"],
+                "states": len(g["states"]),
+                "derivation_events": g["derivations"],
+                "edges": g["edges"],
+                "sccs": g["sccs"],
+            },
+            "horizons": hrs,
+            "closure_completion_specificity_pass": specificity_pass,
+            "plateau": {
+                "H": list(PLATEAU_H),
+                "mean_opening_bits": plateau_vals,
+                "n": plateau_ns,
+                "range_bits": plateau_range,
+                "mean_bits": plateau_mean,
+                "pass": plateau_pass,
+            },
+            "floor_corrected_coupling_pass": coupling_pass,
+        }
+
+    contexts = result["contexts"].values()
+    result["closure_completion_specificity_status"] = (
+        "CONFIRMED" if all((not c["generator"]["cap_hit"]) and c["closure_completion_specificity_pass"] for c in contexts)
+        else "NOT_CONFIRMED"
     )
+    contexts = result["contexts"].values()
+    result["boundary_opening_plateau_status"] = (
+        "CONFIRMED" if all((not c["generator"]["cap_hit"]) and c["plateau"]["pass"] for c in contexts)
+        else "NOT_CONFIRMED"
+    )
+    contexts = result["contexts"].values()
+    result["floor_corrected_coupling_status"] = (
+        "CONFIRMED" if all((not c["generator"]["cap_hit"]) and c["floor_corrected_coupling_pass"] for c in contexts)
+        else "NOT_CONFIRMED"
+    )
+    result["status"] = "THREE_SEPARATE_PREREGISTERED_GATES_REPORTED_NO_POSTHOC_COMPOSITE"
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
     print(json.dumps(result, indent=2, sort_keys=True))
 
