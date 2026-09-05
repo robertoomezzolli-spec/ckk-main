@@ -182,6 +182,21 @@ class CKKKnowledgeAdapterTests(unittest.TestCase):
         unrelated = Observation("wa:2", "whatsapp:1", "message.text", {"text": "hello"}, 1.0)
         self.assertEqual(client.observations_for(unrelated), ())
 
+    def test_client_reserves_budget_for_history_and_current_source(self):
+        payload = self.index.retrieve("where does MAXDIM originate", limit=6)
+        client = CKKKnowledgeClient("http://adapter", "x" * 32, maximum_results=6)
+        client._opener = lambda *_args, **_kwargs: Response(payload)
+        inbound = Observation(
+            "wa:history", "whatsapp:1", "message.text", {"text": "where does MAXDIM originate"}, 1.0
+        )
+        evidence = client.observations_for(inbound)
+        kinds = {item.payload["evidence_type"] for item in evidence}
+        self.assertIn("commit_history", kinds)
+        self.assertIn("retrieved_chunk", kinds)
+        origin = next(item for item in evidence if item.payload["history_position"] == "oldest_matching_change")
+        self.assertEqual(origin.payload["commit_sha"], self.first_commit)
+        self.assertEqual(origin.payload["path"], "ckk_snapshot/ckk/gen/grammar.py")
+
     def test_provenance_persists_but_content_never_enters_episode_retrieval(self):
         with tempfile.TemporaryDirectory() as directory:
             store = SQLiteStateStore(str(Path(directory) / "state.sqlite3"))

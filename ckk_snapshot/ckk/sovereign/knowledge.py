@@ -77,9 +77,13 @@ class CKKKnowledgeClient:
         return payload
 
     def _observations(self, parent_id: str, response: dict[str, Any]) -> tuple[Observation, ...]:
-        candidates: list[tuple[str, dict[str, Any]]] = [("retrieved_chunk", item) for item in response.get("items", [])]
-        candidates.extend(("commit_history", item) for item in response.get("history", []))
-        candidates.extend(("commit_diff", item) for item in response.get("diff", []))
+        history = [item for item in response.get("history", []) if isinstance(item, dict)]
+        oldest = [item for item in history if item.get("history_position") == "oldest_matching_change"]
+        recent = [item for item in history if item.get("history_position") != "oldest_matching_change"]
+        candidates: list[tuple[str, dict[str, Any]]] = []
+        candidates.extend(("commit_diff", item) for item in response.get("diff", [])[:2])
+        candidates.extend(("commit_history", item) for item in [*oldest[:1], *recent[:1]])
+        candidates.extend(("retrieved_chunk", item) for item in response.get("items", []))
         observations: list[Observation] = []
         remaining = self.maximum_total_chars
         for evidence_type, raw in candidates:
@@ -104,6 +108,10 @@ class CKKKnowledgeClient:
                 "evidence_labels": list(raw["evidence_labels"]),
                 "content_sha256": str(raw.get("content_sha256") or ""),
                 "retrieval_methods": list(raw.get("retrieval_methods") or []),
+                "authored_at": str(raw.get("authored_at") or ""),
+                "commit_subject": str(raw.get("subject") or ""),
+                "history_position": str(raw.get("history_position") or ""),
+                "history_term": str(raw.get("term") or ""),
                 "truth_status": "external_evidence_unverified",
                 "belief_status": "not_committed",
                 "evidence_type": evidence_type,
