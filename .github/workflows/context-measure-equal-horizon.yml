@@ -1,0 +1,24 @@
+name: context-measure-equal-horizon
+on:
+  workflow_dispatch:
+  push:
+    branches: [experiment/solar-system-provenance-cascade]
+    paths:
+      - 'experiments/context_measure_equal_horizon_gate.py'
+      - '.github/workflows/context-measure-equal-horizon.yml'
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run equal-horizon context control
+        run: python experiments/context_measure_equal_horizon_gate.py
+      - name: Show result
+        run: cat results/context_measure_equal_horizon_gate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: context-measure-equal-horizon-result
+          path: results/context_measure_equal_horizon_gate.json
