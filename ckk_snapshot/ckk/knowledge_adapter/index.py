@@ -17,6 +17,8 @@ import math
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shlex
+import shutil
 import sqlite3
 import subprocess
 import tempfile
@@ -55,6 +57,15 @@ def _run_git(repo: Path | None, *args: str, timeout: int = 180) -> str:
         command.extend(["-C", str(repo)])
     command.extend(args)
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_CONFIG_NOSYSTEM": "1"}
+    ssh_key = os.getenv("CKK_GIT_SSH_KEY", "")
+    known_hosts = os.getenv("CKK_GIT_KNOWN_HOSTS", "")
+    if ssh_key or known_hosts:
+        if not ssh_key or not known_hosts or not Path(ssh_key).is_file() or not Path(known_hosts).is_file():
+            raise RuntimeError("configured CKK SSH identity is incomplete")
+        env["GIT_SSH_COMMAND"] = (
+            f"ssh -i {shlex.quote(ssh_key)} -o IdentitiesOnly=yes -o BatchMode=yes "
+            f"-o StrictHostKeyChecking=yes -o UserKnownHostsFile={shlex.quote(known_hosts)}"
+        )
     result = subprocess.run(command, capture_output=True, check=False, env=env, timeout=timeout)
     if result.returncode:
         error = result.stderr.decode("utf-8", "replace").strip()
@@ -80,16 +91,27 @@ class GitMirror:
     """A fetch-only Git mirror with an explicitly disabled push URL."""
 
     def __init__(self, repository_url: str, path: str | Path, default_ref: str = "main"):
-        if not repository_url.startswith("https://github.com/") or not repository_url.endswith(".git"):
-            raise ValueError("CKK repository must be an HTTPS GitHub .git URL")
+        github_https = repository_url.startswith("https://github.com/")
+        github_ssh = repository_url.startswith("git@github.com:")
+        if not (github_https or github_ssh) or not repository_url.endswith(".git"):
+            raise ValueError("CKK repository must be a GitHub HTTPS or SSH .git URL")
         self.repository_url = repository_url
         self.path = Path(path)
         self.default_ref = _valid_ref(default_ref)
 
     def refresh(self) -> str:
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        if self.path.exists() and not (self.path / "HEAD").exists():
+            incomplete = self.path.with_name(f"{self.path.name}.incomplete-{os.getpid()}")
+            os.replace(self.path, incomplete)
+            shutil.rmtree(incomplete)
         if not self.path.exists():
-            _run_git(None, "clone", "--mirror", self.repository_url, str(self.path), timeout=300)
+            temporary = Path(tempfile.mkdtemp(prefix="ckk-mirror-", dir=self.path.parent))
+            try:
+                _run_git(None, "clone", "--mirror", self.repository_url, str(temporary), timeout=300)
+                os.replace(temporary, self.path)
+            finally:
+                shutil.rmtree(temporary, ignore_errors=True)
         elif not (self.path / "HEAD").exists():
             raise RuntimeError("cache path exists but is not a Git mirror")
         actual = _run_git(self.path, "remote", "get-url", "origin").strip()
@@ -98,6 +120,12 @@ class GitMirror:
         _run_git(self.path, "remote", "set-url", "--push", "origin", "disabled://read-only")
         _run_git(self.path, "fetch", "--prune", "--tags", "origin", timeout=300)
         return self.resolve(self.default_ref)
+
+    @property
+    def canonical_repository(self) -> str:
+        if self.repository_url.startswith("git@github.com:"):
+            return "https://github.com/" + self.repository_url.removeprefix("git@github.com:").removesuffix(".git")
+        return self.repository_url.removesuffix(".git")
 
     def resolve(self, ref: str | None = None) -> str:
         safe = _valid_ref(ref or self.default_ref)
@@ -147,7 +175,7 @@ class GitMirror:
             paths = [line for line in lines[3:] if line.strip()]
             for path in paths or ["(repository history)"]:
                 records.append({
-                    "repository": self.repository_url.removesuffix(".git"),
+                    "repository": self.canonical_repository,
                     "commit_sha": sha,
                     "path": path,
                     "authored_at": authored_at,
@@ -188,7 +216,7 @@ class GitMirror:
             used += len(excerpt)
             labels = classify_source(current_path)[1]
             items.append({
-                "repository": self.repository_url.removesuffix(".git"),
+                "repository": self.canonical_repository,
                 "base_commit_sha": base,
                 "commit_sha": target,
                 "path": current_path,
@@ -447,7 +475,7 @@ class CKKIndex:
                         chunks += 1
                 metadata = {
                     "schema_version": self.SCHEMA_VERSION,
-                    "repository": self.mirror.repository_url.removesuffix(".git"),
+                    "repository": self.mirror.canonical_repository,
                     "ref": self.mirror.default_ref,
                     "commit_sha": commit_sha,
                     "indexed_at": _utc_now(),
@@ -593,7 +621,7 @@ class CKKIndex:
     def diff(self, base_ref: str, target_ref: str) -> dict[str, Any]:
         items = self.mirror.diff(base_ref, target_ref)
         return {
-            "repository": self.mirror.repository_url.removesuffix(".git"),
+            "repository": self.mirror.canonical_repository,
             "base_commit_sha": self.mirror.resolve(base_ref),
             "commit_sha": self.mirror.resolve(target_ref),
             "items": items,
@@ -627,7 +655,7 @@ class CKKIndex:
         if row is None:
             raise RuntimeError("index row disappeared")
         return {
-            "repository": self.mirror.repository_url.removesuffix(".git"),
+            "repository": self.mirror.canonical_repository,
             "ref": self.mirror.default_ref,
             "commit_sha": row["commit_sha"],
             "blob_sha": row["blob_sha"],

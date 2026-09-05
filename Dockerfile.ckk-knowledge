@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 COPY requirements-knowledge.txt ./
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git && \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git openssh-client && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r requirements-knowledge.txt
 COPY ckk_snapshot/ckk/knowledge_adapter ./ckk_snapshot/ckk/knowledge_adapter

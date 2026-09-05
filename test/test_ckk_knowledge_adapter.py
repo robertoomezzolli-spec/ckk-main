@@ -81,6 +81,10 @@ class CKKKnowledgeAdapterTests(unittest.TestCase):
         self.index = CKKIndex(mirror, root / "index.sqlite3")
         self.index.rebuild(self.head)
 
+    def test_ssh_remote_is_reported_as_canonical_github_source(self):
+        mirror = GitMirror("git@github.com:robertoomezzolli-spec/ckk.git", self.index.mirror.path, "main")
+        self.assertEqual(mirror.canonical_repository, "https://github.com/robertoomezzolli-spec/ckk")
+
     def tearDown(self):
         self.temporary.cleanup()
 

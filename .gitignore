@@ -12,3 +12,4 @@ coverage/
 audit/run34-audit.json
 control/
 *.deadman-private.pem
+.secrets/

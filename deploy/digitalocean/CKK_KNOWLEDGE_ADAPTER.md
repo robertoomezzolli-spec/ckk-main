@@ -4,6 +4,9 @@ Production KAIROS reads CKK through an internal, read-only evidence adapter. The
 source is `https://github.com/robertoomezzolli-spec/ckk` at the configured Git
 ref. The adapter maintains a fetch-only Git mirror and an atomic SQLite index in
 the `ckk-knowledge-cache` volume. Its push URL is deliberately disabled.
+The private repository is authenticated with a repository-specific, read-only
+GitHub deploy key mounted as a Docker secret. Strict host-key checking uses a
+GitHub-published known-hosts file; no personal GitHub token enters the container.
 
 The adapter offers authenticated internal endpoints for hybrid, exact, symbol,
 filename and deterministic local vector search, commit history, and bounded

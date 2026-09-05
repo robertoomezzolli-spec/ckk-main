@@ -8,14 +8,19 @@ services:
     env_file:
       - .env.ckk-knowledge
     environment:
-      CKK_REPOSITORY_URL: https://github.com/robertoomezzolli-spec/ckk.git
+      CKK_REPOSITORY_URL: git@github.com:robertoomezzolli-spec/ckk.git
       CKK_REPOSITORY_REF: main
       CKK_CACHE_DIRECTORY: /cache
       CKK_REFRESH_SECONDS: "900"
+      CKK_GIT_SSH_KEY: /run/secrets/ckk_readonly_key
+      CKK_GIT_KNOWN_HOSTS: /run/secrets/ckk_github_known_hosts
     expose:
       - "8070"
     volumes:
       - ckk-knowledge-cache:/cache
+    secrets:
+      - ckk_readonly_key
+      - ckk_github_known_hosts
     read_only: true
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
@@ -145,3 +150,9 @@ volumes:
 
 networks:
   internal:
+
+secrets:
+  ckk_readonly_key:
+    file: .secrets/ckk_readonly_key
+  ckk_github_known_hosts:
+    file: .secrets/github_known_hosts
