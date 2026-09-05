@@ -1,0 +1,18 @@
+name: riemann-existing-path-audit
+on: [push]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Audit frozen grammar
+        run: python experiments/riemann_existing_path_audit.py
+      - name: Show result
+        run: cat results/riemann_existing_path_audit.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riemann-existing-path-audit
+          path: results/riemann_existing_path_audit.json
