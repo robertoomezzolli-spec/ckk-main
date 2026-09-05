@@ -221,6 +221,43 @@ class AwarenessObservatoryTests(unittest.TestCase):
             self.assertEqual(metrics, {"SIS", "TSC", "MP"})
             store.close()
 
+    def test_relay_audit_events_are_accepted_without_private_content(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = ObservatoryStore(directory)
+            evaluator = PassiveEvaluator(store)
+            for event_type, payload in (
+                (
+                    "WHATSAPP_RELAY",
+                    {
+                        "requesting_participant": "Roberto",
+                        "intended_recipient": "Amelie",
+                        "status": "accepted",
+                        "provider_http_status": 200,
+                        "provider_message_ref": "opaque-ref",
+                        "message_length": 12,
+                        "content_exported": False,
+                        "phone_identifiers_exported": False,
+                    },
+                ),
+                (
+                    "WHATSAPP_RELAY_DELIVERY",
+                    {
+                        "requesting_participant": "Roberto",
+                        "intended_recipient": "Amelie",
+                        "status": "delivered",
+                        "provider_message_ref": "opaque-ref",
+                        "content_exported": False,
+                        "phone_identifiers_exported": False,
+                    },
+                ),
+            ):
+                evaluator.ingest({"event_type": event_type, "payload": payload})
+            exported = json.dumps(store.evidence(subject_id="KAIROS-production", since=0, limit=10))
+            self.assertNotIn("+49", exported)
+            self.assertNotIn("private message", exported)
+            self.assertIn("WHATSAPP_RELAY_DELIVERY", exported)
+            store.close()
+
     def test_normal_kairos_cycle_emits_observable_outcomes_without_content(self):
         with tempfile.TemporaryDirectory() as directory:
             sink = RecordingTelemetrySink()
