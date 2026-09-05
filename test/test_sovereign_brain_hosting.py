@@ -82,6 +82,18 @@ class SovereignBrainHostingTests(unittest.TestCase):
         self.assertTrue(json.loads(call["input"])["conversation_policy"]["direct_message_reply_required"])
         self.assertNotIn("You are called", call["instructions"])
 
+    def test_published_research_is_routed_to_short_whatsapp_verdict_and_url(self):
+        client = FakeClient(decision("service_message", "DIRECT\nhttps://example.test/research/run"))
+        brain = OpenAIResponsesCognition(
+            WhatsAppConfig(OWNER, "phone"), client=client, service_window_provider=lambda recipient: True
+        )
+        observation = Observation("wa:publish", f"whatsapp:{OWNER}", "message.text", {"text": "publish run"}, 1.0)
+        brain.reflect((observation,), (), {}, BootstrapLaws())
+        instructions = client.responses.calls[0]["instructions"]
+        self.assertIn("invoke research.publish", instructions)
+        self.assertIn("only a short verdict and the returned publication_url", instructions)
+        self.assertIn("never the long-form report", instructions)
+
     def test_brain_may_choose_silence(self):
         brain = OpenAIResponsesCognition(WhatsAppConfig(OWNER, "phone"), client=FakeClient(decision()))
         self.assertIsNone(brain.reflect((), (), {}, BootstrapLaws()).intent)
