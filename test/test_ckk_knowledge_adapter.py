@@ -197,6 +197,29 @@ class CKKKnowledgeAdapterTests(unittest.TestCase):
         self.assertEqual(origin.payload["commit_sha"], self.first_commit)
         self.assertEqual(origin.payload["path"], "ckk_snapshot/ckk/gen/grammar.py")
 
+    def test_client_prioritizes_query_relevant_file_in_bounded_diff(self):
+        payload = {
+            "commit_sha": self.head,
+            "items": [],
+            "diff": [
+                {"repository": "https://github.com/robertoomezzolli-spec/ckk", "commit_sha": self.head,
+                 "base_commit_sha": self.first_commit, "path": "README.md", "source_kind": "commit_diff",
+                 "evidence_labels": ["commit_diff"], "excerpt": "unrelated prose"},
+                {"repository": "https://github.com/robertoomezzolli-spec/ckk", "commit_sha": self.head,
+                 "base_commit_sha": self.first_commit, "path": "ckk_snapshot/ckk/gen/grammar.py",
+                 "source_kind": "commit_diff", "evidence_labels": ["commit_diff"],
+                 "excerpt": "-MAXDIM = 3\n+MAXDIM = 4"},
+            ],
+        }
+        client = CKKKnowledgeClient("http://adapter", "x" * 32, maximum_results=1)
+        client._opener = lambda *_args, **_kwargs: Response(payload)
+        inbound = Observation(
+            "wa:diff", "whatsapp:1", "message.text",
+            {"text": "what changed between commits for MAXDIM"}, 1.0,
+        )
+        evidence = client.observations_for(inbound)
+        self.assertEqual(evidence[0].payload["path"], "ckk_snapshot/ckk/gen/grammar.py")
+
     def test_provenance_persists_but_content_never_enters_episode_retrieval(self):
         with tempfile.TemporaryDirectory() as directory:
             store = SQLiteStateStore(str(Path(directory) / "state.sqlite3"))

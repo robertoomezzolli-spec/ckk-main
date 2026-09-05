@@ -23,6 +23,7 @@ _CKK_INTENT = re.compile(
     r"backtrace|provenance|evidence|dimension(?:al)?\s+(?:limit|cutoff|bound))",
     re.IGNORECASE,
 )
+_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]{1,127}")
 
 
 @dataclass
@@ -56,7 +57,7 @@ class CKKKnowledgeClient:
             self.last_commit_sha = str(response.get("commit_sha") or "") or None
             self.last_error_type = None
             self.retrievals += 1
-            return self._observations(source.observation_id, response)
+            return self._observations(source.observation_id, response, query)
         except Exception as exc:
             self.last_error_type = type(exc).__name__
             return ()
@@ -76,12 +77,24 @@ class CKKKnowledgeClient:
             raise ValueError("CKK adapter returned an invalid response")
         return payload
 
-    def _observations(self, parent_id: str, response: dict[str, Any]) -> tuple[Observation, ...]:
+    def _observations(self, parent_id: str, response: dict[str, Any], query: str = "") -> tuple[Observation, ...]:
         history = [item for item in response.get("history", []) if isinstance(item, dict)]
         oldest = [item for item in history if item.get("history_position") == "oldest_matching_change"]
         recent = [item for item in history if item.get("history_position") != "oldest_matching_change"]
+        diff_items = [item for item in response.get("diff", []) if isinstance(item, dict)]
+        meaningful_terms = {
+            term.lower() for term in _IDENTIFIER.findall(query)
+            if len(term) >= 4 and term.lower() not in {"what", "changed", "between", "commit", "commits", "compare"}
+        }
+        if meaningful_terms:
+            diff_items.sort(
+                key=lambda item: -sum(
+                    term in f"{item.get('path', '')}\n{item.get('excerpt', '')}".lower()
+                    for term in meaningful_terms
+                )
+            )
         candidates: list[tuple[str, dict[str, Any]]] = []
-        candidates.extend(("commit_diff", item) for item in response.get("diff", [])[:2])
+        candidates.extend(("commit_diff", item) for item in diff_items[:2])
         candidates.extend(("commit_history", item) for item in [*oldest[:1], *recent[:1]])
         candidates.extend(("retrieved_chunk", item) for item in response.get("items", []))
         observations: list[Observation] = []
