@@ -1,0 +1,28 @@
+name: post-boundary-reexpansion-gate
+
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+    paths:
+      - experiments/post_boundary_reexpansion_gate.py
+      - .github/workflows/post-boundary-reexpansion-gate.yml
+      - ckk_snapshot/ckk/gen/**
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run blind post-boundary re-expansion gate
+        run: python experiments/post_boundary_reexpansion_gate.py
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-boundary-reexpansion-result
+          path: results/post_boundary_reexpansion_gate.json
+          if-no-files-found: error
