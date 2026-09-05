@@ -7,6 +7,7 @@ on:
     paths:
       - experiments/causal_approach_dilation_gate.py
       - experiments/causal_approach_dilation_gate_l5.py
+      - experiments/causal_approach_dilation_gate_l6.py
       - .github/workflows/causal-approach-dilation.yml
       - ckk_snapshot/ckk/gen/grammar.py
       - ckk_snapshot/ckk/gen/expand.py
@@ -21,11 +22,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run blind causal approach dilation gate at level 5
-        run: python experiments/causal_approach_dilation_gate_l5.py
+      - name: Run blind causal approach dilation gate at level 6
+        run: python experiments/causal_approach_dilation_gate_l6.py
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
-          name: causal-approach-dilation-result-l5
-          path: results/causal_approach_dilation_gate_l5.json
+          name: causal-approach-dilation-result-l6
+          path: results/causal_approach_dilation_gate_l6.json
           if-no-files-found: error
