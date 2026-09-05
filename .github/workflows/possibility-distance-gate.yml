@@ -1,0 +1,29 @@
+name: possibility-distance-gate
+
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+    paths:
+      - experiments/possibility_distance_gate.py
+      - .github/workflows/possibility-distance-gate.yml
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run possibility-distance gate
+        run: python experiments/possibility_distance_gate.py
+      - name: Show result
+        if: always()
+        run: cat results/possibility_distance_gate.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: possibility-distance-gate-result
+          path: results/possibility_distance_gate.json
