@@ -1,0 +1,22 @@
+name: flatland-closure-projection
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+  workflow_dispatch:
+jobs:
+  flatland-closure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run flatland closure projection test
+        run: python experiments/flatland_closure_projection_test.py
+      - name: Show result
+        run: cat results/flatland_closure_projection.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatland-closure-projection-result
+          path: results/flatland_closure_projection.json
