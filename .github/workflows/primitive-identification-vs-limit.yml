@@ -1,0 +1,20 @@
+name: primitive-identification-vs-limit
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run primitive identification test
+        run: python experiments/primitive_identification_vs_limit.py
+      - name: Show result
+        if: always()
+        run: cat results/primitive_identification_vs_limit.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: primitive-identification-vs-limit-result
+          path: results/primitive_identification_vs_limit.json
