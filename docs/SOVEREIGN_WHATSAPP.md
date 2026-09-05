@@ -47,6 +47,12 @@ verb and the other participant's name. Raw-number and third-party targets,
 self-relays, clock/status-triggered outreach, and chat-based allowlist changes
 are rejected. The target must also have an open Meta service window.
 
+Passing that gate grants an option, not an obligation. KAIROS may relay the
+substance, phrase it in its own words, or decline to carry the message. The
+runtime does not force a tool call or replace KAIROS' reply with a canned
+confirmation. If KAIROS does invoke the tool, trusted code still attributes
+the real requester and an actual provider failure overrides any success claim.
+
 Every inbound event can produce at most one relay. A durable reservation is
 written before the Graph API call, so a cognition retry cannot duplicate an
 accepted or uncertain send. The relay audit stores participant labels,

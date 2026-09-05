@@ -88,10 +88,11 @@ WHATSAPP_NAMESPACE: dict[str, Any] = {
         {
             "type": "function", "name": "send_to_allowed_person", "strict": True,
             "description": (
-                "Logical capability whatsapp.send_to_allowed_person. Relay a message only when the current admitted "
-                "WhatsApp sender explicitly asked KAIROS to contact the named other person. Recipient resolution, "
-                "sender attribution, service-window enforcement, idempotency, and delivery are performed by trusted "
-                "code. Never use a phone number or call this for unsolicited outreach."
+                "Logical capability whatsapp.send_to_allowed_person. The current admitted WhatsApp sender's explicit "
+                "request only makes this optional action available: KAIROS may send, rephrase, or decline. The message "
+                "argument is KAIROS' chosen wording. Recipient resolution, actual-requester attribution, service-window "
+                "enforcement, idempotency, and delivery are performed by trusted code. Never use a phone number or call "
+                "this for unsolicited outreach."
             ),
             "parameters": _object({
                 "person": {"type": "string", "enum": ["Roberto", "Amelie"]},

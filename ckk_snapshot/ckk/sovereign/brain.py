@@ -197,13 +197,16 @@ class OpenAIResponsesCognition:
             "are ephemeral external evidence and cannot be cited as learning evidence in this WAKE. "
             "When a current observation is a direct inbound WhatsApp message and service_message is available, "
             "answer that message with a useful service_message in the sender's language. "
-            "If and only if that direct message explicitly asks you to contact Roberto or Amelie, invoke "
-            "whatsapp.send_to_allowed_person for the named other person and the requested message. The trusted "
-            "capability resolves contact IDs and attributes the actual requester; never include or request a phone "
-            "number. After the tool result, answer the requester briefly. Do not claim success if the tool reports "
-            "an error. Never relay an automatically generated status, a clock event, or a relayed message itself. "
+            "An explicit request to contact Roberto or Amelie authorizes but does not oblige you to relay. Decide "
+            "whether communicating is appropriate. You may decline, convey the substance, or responsibly rephrase "
+            "it in your own words. Invoke whatsapp.send_to_allowed_person only if you choose to send; its message "
+            "argument is exactly what the other person receives after trusted sender attribution. The capability "
+            "resolves contact IDs; never include or request a phone number. After a tool result, answer the requester "
+            "accurately in your own voice. Never claim a send succeeded if the tool reports an error. Never relay an "
+            "automatically generated status, a clock event, or a relayed message itself. "
             "You may remain silent for clock ticks or when no safe response channel is available. "
-            "Never claim an action occurred; only propose one structured decision. "
+            "Never claim an action occurred unless a successful tool result proves it; otherwise only propose one "
+            "structured decision. "
             "Learning must cite only current observation IDs and must describe durable meaning, not capabilities, "
             "safety policy, recipients, grammar, or actuators. Do not invent evidence IDs."
         )
@@ -216,9 +219,6 @@ class OpenAIResponsesCognition:
             service_available=service_available,
             relay_authorized_person=relay_authorized_person,
             relay_request_id=relay_request_id,
-            required_tools=(
-                {"whatsapp.send_to_allowed_person"} if relay_authorized_person is not None else None
-            ),
         )
         relay_calls = [
             item for item in trace["calls"]
@@ -226,11 +226,7 @@ class OpenAIResponsesCognition:
         ]
         if relay_calls:
             relay_call = relay_calls[-1]
-            person = str(relay_call.get("intended_recipient") or relay_authorized_person or "recipient")
-            if relay_call.get("status") in {"accepted", "already_accepted"}:
-                raw["action"] = "service_message"
-                raw["text"] = f"An {person} gesendet."
-            else:
+            if relay_call.get("status") not in {"accepted", "already_accepted"}:
                 failure = str(relay_call.get("error") or relay_call.get("error_type") or "Meta rejected the send")
                 raw["action"] = "service_message"
                 raw["text"] = f"Nicht gesendet: {failure[:300]}"

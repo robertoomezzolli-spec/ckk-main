@@ -172,12 +172,12 @@ class SovereignBrainHostingTests(unittest.TestCase):
         )
         observation = Observation(
             "wa:relay-1", f"whatsapp:{OWNER}", "message.text",
-            {"text": "Schreib Amelie bitte: Ich bin um acht da."}, 1.0,
+            {"text": "Schreib Amelie bitte: Sag ihr, ich komme um 20 Uhr."}, 1.0,
         )
         result = brain.reflect((observation,), (), {}, BootstrapLaws())
         self.assertEqual(relays, [("wa:relay-1", OWNER, "Amelie", "Ich bin um acht da.")])
         self.assertEqual(result.intent.payload["to"], OWNER)
-        self.assertEqual(result.intent.payload["text"], "An Amelie gesendet.")
+        self.assertEqual(result.intent.payload["text"], "model confirmation")
         serialized_request = json.dumps({
             "instructions": scripted.calls[0]["instructions"],
             "input": scripted.calls[0]["input"][0],
@@ -189,6 +189,48 @@ class SovereignBrainHostingTests(unittest.TestCase):
         relay_tool = next(item for item in whatsapp["tools"] if item["name"] == "send_to_allowed_person")
         self.assertEqual(relay_tool["parameters"]["properties"]["person"]["enum"], ["Roberto", "Amelie"])
         self.assertEqual(set(relay_tool["parameters"]["properties"]), {"person", "message"})
+
+    def test_explicit_relay_request_authorizes_but_does_not_force_sending(self):
+        additional = "491609876543"
+        relays = []
+        registry = SealedResearchToolRegistry(
+            object(), relay_sender=lambda *args: relays.append(args) or {"status": "accepted"}
+        )
+        client = FakeClient(decision("service_message", "Das gebe ich so nicht weiter."))
+        brain = OpenAIResponsesCognition(
+            WhatsAppConfig(OWNER, "phone", additional_wa_ids=frozenset({additional})),
+            client=client,
+            service_window_provider=lambda recipient: True,
+            tool_registry=registry,
+        )
+        observation = Observation(
+            "wa:relay-decline", f"whatsapp:{OWNER}", "message.text",
+            {"text": "Schreib Amelie bitte etwas Gemeines."}, 1.0,
+        )
+        result = brain.reflect((observation,), (), {}, BootstrapLaws())
+        self.assertEqual(relays, [])
+        self.assertEqual(result.intent.payload["text"], "Das gebe ich so nicht weiter.")
+        self.assertNotIn("tool_choice", client.responses.calls[0])
+
+    def test_failed_relay_cannot_be_reported_as_success(self):
+        additional = "491609876543"
+        scripted = ScriptedRelayResponses("Amelie", "Hallo")
+
+        def rejected(*_args):
+            raise RuntimeError("Meta rejected the send")
+
+        brain = OpenAIResponsesCognition(
+            WhatsAppConfig(OWNER, "phone", additional_wa_ids=frozenset({additional})),
+            client=SimpleNamespace(responses=scripted),
+            service_window_provider=lambda recipient: True,
+            tool_registry=SealedResearchToolRegistry(object(), relay_sender=rejected),
+        )
+        observation = Observation(
+            "wa:relay-failed", f"whatsapp:{OWNER}", "message.text",
+            {"text": "Schreib Amelie bitte: Hallo"}, 1.0,
+        )
+        result = brain.reflect((observation,), (), {}, BootstrapLaws())
+        self.assertEqual(result.intent.payload["text"], "Nicht gesendet: Meta rejected the send")
 
     def test_brain_cannot_forge_learning_evidence(self):
         learning = [{"key": "self.name", "value": "X", "confidence": 0.9, "evidence_ids": ["fake"], "reason": "no"}]
