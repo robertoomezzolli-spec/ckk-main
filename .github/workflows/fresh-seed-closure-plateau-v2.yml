@@ -1,27 +1,29 @@
 name: fresh-seed-closure-plateau-v2
 
 # Scientific thresholds are frozen in experiments/PREREG_FRESH_SEED_CLOSURE_PLATEAU_V2.md.
-# This workflow-only commit exists solely to start the first valid post-freeze V2 run.
+# This workflow changes execution only: the fast runner must prove equivalence
+# against the original brute-force expander before the scientific run proceeds.
 on:
   push:
     branches:
       - experiment/solar-system-provenance-cascade
     paths:
       - 'experiments/fresh_seed_closure_plateau_gate_v2.py'
+      - 'experiments/fresh_seed_closure_plateau_gate_v2_fast.py'
       - '.github/workflows/fresh-seed-closure-plateau-v2.yml'
   workflow_dispatch:
 
 jobs:
   gate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Run preregistered closure plateau + floor-null gate
-        run: python experiments/fresh_seed_closure_plateau_gate_v2.py
+        run: python experiments/fresh_seed_closure_plateau_gate_v2_fast.py
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
