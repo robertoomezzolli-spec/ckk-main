@@ -1,0 +1,20 @@
+name: resistance-endogeneity-audit
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run resistance endogeneity audit
+        run: python experiments/resistance_endogeneity_audit.py
+      - name: Show result
+        if: always()
+        run: cat results/resistance_endogeneity_audit.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resistance-endogeneity-audit-result
+          path: results/resistance_endogeneity_audit.json
