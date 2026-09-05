@@ -203,6 +203,35 @@ def create_app(
             settings.openai_model,
         )
     telemetry = telemetry or NullTelemetrySink()
+    experiment_capabilities = {
+        "repo.read", "process.run", "process.status", "process.stop", "file.read", "file.hash", "system.metrics"
+    }
+
+    def record_tool_event(event: dict[str, Any]) -> None:
+        store.record_tool_invocation(event)
+        if event.get("logical_name") not in experiment_capabilities:
+            return
+        summary = event.get("argument_summary") if isinstance(event.get("argument_summary"), dict) else {}
+        telemetry.emit(
+            "CAPABILITY_INVOKED",
+            {
+                "capability": event.get("logical_name"),
+                "operation": summary.get("operation") or summary.get("task"),
+                "job_id": event.get("job_id") or summary.get("job_id"),
+                "start_time": event.get("started_at"),
+                "finish_time": event.get("finished_at"),
+                "status": event.get("status"),
+                "exit_status": event.get("exit_status"),
+                "artifact_path": event.get("artifact_path"),
+                "artifact_sha256": event.get("artifact_sha256"),
+                "arguments_sha256": event.get("arguments_sha256"),
+                "result_sha256": event.get("result_sha256"),
+                "content_exported": False,
+            },
+            latency_ms=event.get("latency_ms"),
+        )
+
+    organism.cognition.tool_registry.audit_sink = record_tool_event
     app = FastAPI(title="Sovereign Fixpoint Organism", docs_url=None, redoc_url=None)
     stop = asyncio.Event()
     cognition_lock = threading.Lock()
@@ -340,10 +369,50 @@ def create_app(
             now = int(time.time())
             store.enqueue((Observation(f"tick:{now}", "internal.clock", "clock.tick", {"unix_time": now}, 1.0),))
 
+    async def experiment_observer() -> None:
+        seen: dict[str, tuple[Any, ...]] = {}
+        while not stop.is_set():
+            try:
+                response = await asyncio.to_thread(knowledge.experiment_process_status, None)
+                for job in response.get("jobs", []):
+                    if not isinstance(job, dict) or not job.get("job_id"):
+                        continue
+                    signature = (
+                        job.get("state"), job.get("started_at"), job.get("finished_at"),
+                        job.get("exit_code"), job.get("result_sha256"),
+                    )
+                    if seen.get(str(job["job_id"])) == signature:
+                        continue
+                    seen[str(job["job_id"])] = signature
+                    telemetry.emit(
+                        "EXPERIMENT_JOB_STATE",
+                        {
+                            "capability": "process.run",
+                            "job_id": job.get("job_id"),
+                            "operation": job.get("task"),
+                            "start_time": job.get("started_at"),
+                            "finish_time": job.get("finished_at"),
+                            "status": job.get("state"),
+                            "exit_status": job.get("exit_code"),
+                            "termination_class": job.get("termination_class"),
+                            "artifact_path": job.get("result_path"),
+                            "artifact_sha256": job.get("result_sha256"),
+                            "peak_rss_bytes": job.get("peak_rss_bytes"),
+                            "runtime_seconds": job.get("runtime_seconds"),
+                            "content_exported": False,
+                        },
+                    )
+            except Exception as exc:
+                logger.warning("experiment observer unavailable error_type=%s", type(exc).__name__)
+            await asyncio.sleep(10)
+
     @app.on_event("startup")
     async def start() -> None:
         app.state.worker = asyncio.create_task(worker())
         app.state.clock = asyncio.create_task(clock())
+        app.state.experiment_observer = (
+            asyncio.create_task(experiment_observer()) if knowledge.enabled else None
+        )
         telemetry.emit(
             "SELF_STATE_OBSERVED",
             {"phase": organism.runtime.phase.value,
@@ -358,8 +427,9 @@ def create_app(
     @app.on_event("shutdown")
     async def shutdown() -> None:
         stop.set()
-        for task in (app.state.worker, app.state.clock):
-            task.cancel()
+        for task in (app.state.worker, app.state.clock, getattr(app.state, "experiment_observer", None)):
+            if task is not None:
+                task.cancel()
         telemetry.close()
 
     @app.get("/healthz")
@@ -374,6 +444,12 @@ def create_app(
             "tasks": {
                 "worker": "running" if worker_task is not None and not worker_task.done() else "stopped",
                 "clock": "running" if clock_task is not None and not clock_task.done() else "stopped",
+                "experiment_observer": (
+                    "running"
+                    if getattr(app.state, "experiment_observer", None) is not None
+                    and not app.state.experiment_observer.done()
+                    else "stopped"
+                ),
             },
             "ckk_knowledge": knowledge.health(),
             "capabilities": list(tool_capabilities),

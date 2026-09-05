@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-for file in .env.sovereign .env.digitalocean .env.observatory .env.observatory-ingest; do
+for file in .env.sovereign .env.digitalocean .env.observatory .env.observatory-ingest .env.ckk-knowledge; do
   if [[ ! -f "$file" ]]; then
     echo "Missing $file" >&2
     exit 1

@@ -100,6 +100,97 @@ RESEARCH_NAMESPACE: dict[str, Any] = {
     }],
 }
 
+REPO_NAMESPACE: dict[str, Any] = {
+    "type": "namespace",
+    "name": "repo",
+    "description": (
+        "Read-only operations for the one allowlisted frozen ckk-main experiment repository. "
+        "No remote writes, pushes, arbitrary repository URLs, or writable source checkout are available."
+    ),
+    "tools": [{
+        "type": "function", "name": "read", "strict": True,
+        "description": (
+            "Logical capability repo.read. Structured operations: sync the fixed mirror; select an exact ref; inspect "
+            "status; read a repository path; inspect a bounded diff; or verify/read the frozen execution manifest."
+        ),
+        "parameters": _object({
+            "operation": {"type": "string", "enum": ["sync", "checkout", "status", "read", "diff", "manifest"]},
+            "path": {"type": ["string", "null"]},
+            "ref": {"type": ["string", "null"]},
+            "base_ref": {"type": ["string", "null"]},
+            "target_ref": {"type": ["string", "null"]},
+        }, ["operation", "path", "ref", "base_ref", "target_ref"]),
+    }],
+}
+
+PROCESS_NAMESPACE: dict[str, Any] = {
+    "type": "namespace",
+    "name": "process",
+    "description": (
+        "Persistent sealed supervisor for the frozen CKK experiment. Jobs outlive a model interaction. "
+        "Only fixed task identifiers are executable; there is no shell or arbitrary command parameter."
+    ),
+    "tools": [
+        {
+            "type": "function", "name": "run", "strict": True,
+            "description": (
+                "Logical capability process.run. Queue a supervisor smoke test, the mandatory brute-force "
+                "equivalence validation, or the frozen full experiment. Full execution is rejected until matching "
+                "equivalence evidence exists."
+            ),
+            "parameters": _object({
+                "task": {"type": "string", "enum": [
+                    "supervisor_smoke", "equivalence_validation", "fresh_seed_closure_plateau_v2"
+                ]},
+                "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            }, ["task", "manifest_sha256"]),
+        },
+        {
+            "type": "function", "name": "status", "strict": True,
+            "description": "Logical capability process.status. Read one job or the recent job list and explicit termination class.",
+            "parameters": _object({"job_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{32}$"}}, ["job_id"]),
+        },
+        {
+            "type": "function", "name": "stop", "strict": True,
+            "description": "Logical capability process.stop. Gracefully stop only a job created by this sealed supervisor.",
+            "parameters": _object({"job_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"}}, ["job_id"]),
+        },
+    ],
+}
+
+FILE_NAMESPACE: dict[str, Any] = {
+    "type": "namespace",
+    "name": "file",
+    "description": "Read-only access to generated experiment artifacts by job-relative path. No general filesystem access.",
+    "tools": [
+        {
+            "type": "function", "name": "read", "strict": True,
+            "description": "Logical capability file.read. Read a bounded text excerpt from a sealed job artifact.",
+            "parameters": _object({
+                "path": {"type": "string"},
+                "offset": {"type": "integer", "minimum": 0},
+                "maximum_chars": {"type": "integer", "minimum": 1, "maximum": 32000},
+            }, ["path", "offset", "maximum_chars"]),
+        },
+        {
+            "type": "function", "name": "hash", "strict": True,
+            "description": "Logical capability file.hash. Stream SHA-256 over one sealed job artifact.",
+            "parameters": _object({"path": {"type": "string"}}, ["path"]),
+        },
+    ],
+}
+
+SYSTEM_NAMESPACE: dict[str, Any] = {
+    "type": "namespace",
+    "name": "system",
+    "description": "Read-only CPU, memory, disk, runtime, exit and cgroup/OOM evidence for the sealed experiment worker.",
+    "tools": [{
+        "type": "function", "name": "metrics", "strict": True,
+        "description": "Logical capability system.metrics. Observe worker resources and optionally one job; changes nothing.",
+        "parameters": _object({"job_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{32}$"}}, ["job_id"]),
+    }],
+}
+
 
 @dataclass
 class SealedResearchToolRegistry:
@@ -109,11 +200,18 @@ class SealedResearchToolRegistry:
 
     @property
     def capabilities(self) -> tuple[str, ...]:
-        return ("whatsapp.send", "ckk.search", "ckk.read", "ckk.symbol", "ckk.run", "research.publish")
+        return (
+            "whatsapp.send", "ckk.search", "ckk.read", "ckk.symbol", "ckk.run", "research.publish",
+            "repo.read", "process.run", "process.status", "process.stop", "file.read", "file.hash",
+            "system.metrics",
+        )
 
     @property
     def definitions(self) -> list[dict[str, Any]]:
-        return deepcopy([WHATSAPP_NAMESPACE, CKK_NAMESPACE, RESEARCH_NAMESPACE])
+        return deepcopy([
+            WHATSAPP_NAMESPACE, CKK_NAMESPACE, RESEARCH_NAMESPACE, REPO_NAMESPACE, PROCESS_NAMESPACE,
+            FILE_NAMESPACE, SYSTEM_NAMESPACE,
+        ])
 
     @property
     def definition_sha256(self) -> str:
@@ -124,12 +222,15 @@ class SealedResearchToolRegistry:
         aliases = {
             "ckk_search": "ckk.search", "ckk_read": "ckk.read", "ckk_symbol": "ckk.symbol", "ckk_run": "ckk.run",
             "whatsapp_send": "whatsapp.send", "research_publish": "research.publish",
+            "repo_read": "repo.read", "process_run": "process.run", "process_status": "process.status",
+            "process_stop": "process.stop", "file_read": "file.read", "file_hash": "file.hash",
+            "system_metrics": "system.metrics",
         }
         if name in aliases:
             return aliases[name]
         if "." in name:
             return name
-        if namespace in {"ckk", "whatsapp", "research"}:
+        if namespace in {"ckk", "whatsapp", "research", "repo", "process", "file", "system"}:
             return f"{namespace}.{name}"
         if name in {"search", "read", "symbol", "run"}:
             return f"ckk.{name}"
@@ -137,6 +238,12 @@ class SealedResearchToolRegistry:
             return "whatsapp.send"
         if name == "publish":
             return "research.publish"
+        if name == "metrics":
+            return "system.metrics"
+        if name == "hash":
+            return "file.hash"
+        if name in {"status", "stop"}:
+            return f"process.{name}"
         return name
 
     def execute(
@@ -149,46 +256,92 @@ class SealedResearchToolRegistry:
         service_available: bool = False,
     ) -> dict[str, Any]:
         logical = self.logical_name(name, namespace)
-        started = time.monotonic()
-        if logical == "ckk.search":
-            result = self.ckk.search(arguments["query"], limit=arguments["limit"], mode=arguments["mode"])
-        elif logical == "ckk.read":
-            result = self.ckk.read(arguments["path"], ref=arguments.get("ref"))
-        elif logical == "ckk.symbol":
-            result = self.ckk.symbol(arguments["name"], limit=arguments["limit"])
-        elif logical == "ckk.run":
-            result = self.ckk.run(
-                arguments["seed"], operators=arguments["operators"], controls=arguments["controls"],
-                budgets=arguments["budgets"], ref=arguments.get("ref"),
-            )
-        elif logical == "research.publish":
-            result = self.ckk.publish(arguments["run_id"])
-        elif logical == "whatsapp.send":
-            if not reply_to or not service_available:
-                raise PermissionError("whatsapp.send unavailable outside an admitted service window")
-            result = {
-                "status": "deferred_to_runtime_policy", "recipient_bound": True,
-                "instruction": "Return the text as a service_message in the final structured decision.",
-            }
-        else:
-            raise PermissionError("tool is not registered in the sealed capability allowlist")
+        started_monotonic = time.monotonic()
+        started_at = time.time()
+        try:
+            if logical == "ckk.search":
+                result = self.ckk.search(arguments["query"], limit=arguments["limit"], mode=arguments["mode"])
+            elif logical == "ckk.read":
+                result = self.ckk.read(arguments["path"], ref=arguments.get("ref"))
+            elif logical == "ckk.symbol":
+                result = self.ckk.symbol(arguments["name"], limit=arguments["limit"])
+            elif logical == "ckk.run":
+                result = self.ckk.run(
+                    arguments["seed"], operators=arguments["operators"], controls=arguments["controls"],
+                    budgets=arguments["budgets"], ref=arguments.get("ref"),
+                )
+            elif logical == "research.publish":
+                result = self.ckk.publish(arguments["run_id"])
+            elif logical == "repo.read":
+                result = self.ckk.experiment_repo(
+                    arguments["operation"], path=arguments.get("path"), ref=arguments.get("ref"),
+                    base_ref=arguments.get("base_ref"), target_ref=arguments.get("target_ref"),
+                )
+            elif logical == "process.run":
+                result = self.ckk.experiment_process_run(arguments["task"], arguments["manifest_sha256"])
+            elif logical == "process.status":
+                result = self.ckk.experiment_process_status(arguments.get("job_id"))
+            elif logical == "process.stop":
+                result = self.ckk.experiment_process_stop(arguments["job_id"])
+            elif logical == "file.read":
+                result = self.ckk.experiment_file_read(
+                    arguments["path"], arguments["offset"], arguments["maximum_chars"]
+                )
+            elif logical == "file.hash":
+                result = self.ckk.experiment_file_hash(arguments["path"])
+            elif logical == "system.metrics":
+                result = self.ckk.experiment_system_metrics(arguments.get("job_id"))
+            elif logical == "whatsapp.send":
+                if not reply_to or not service_available:
+                    raise PermissionError("whatsapp.send unavailable outside an admitted service window")
+                result = {
+                    "status": "deferred_to_runtime_policy", "recipient_bound": True,
+                    "instruction": "Return the text as a service_message in the final structured decision.",
+                }
+            else:
+                raise PermissionError("tool is not registered in the sealed capability allowlist")
+        except Exception as exc:
+            failed_result = {"status": "failed", "error_type": type(exc).__name__, "error": str(exc)[:500]}
+            self._record_event(logical, arguments, failed_result, started_at, started_monotonic)
+            raise
         context_result = self._bounded_for_model(logical, result)
+        self._record_event(logical, arguments, result, started_at, started_monotonic)
+        return context_result
+
+    def _record_event(
+        self,
+        logical: str,
+        arguments: dict[str, Any],
+        result: dict[str, Any],
+        started_at: float,
+        started_monotonic: float,
+    ) -> None:
+        job = result.get("job") if isinstance(result.get("job"), dict) else {}
         event = {
             "logical_name": logical,
             "argument_summary": self._argument_summary(logical, arguments),
             "arguments_sha256": hashlib.sha256(json.dumps(arguments, sort_keys=True, default=str).encode()).hexdigest(),
             "result_sha256": hashlib.sha256(json.dumps(result, sort_keys=True, default=str).encode()).hexdigest(),
-            "repository": result.get("repository") if isinstance(result, dict) else None,
-            "commit_sha": result.get("commit_sha") if isinstance(result, dict) else None,
+            "repository": result.get("repository") or job.get("repository"),
+            "commit_sha": result.get("commit_sha") or job.get("commit_sha"),
             "run_id": result.get("run_id") if isinstance(result, dict) else None,
+            "job_id": result.get("job_id") or job.get("job_id"),
             "operator_names": result.get("operator_names", []) if isinstance(result, dict) else [],
-            "latency_ms": round((time.monotonic() - started) * 1000, 3),
+            "started_at": started_at,
+            "finished_at": time.time(),
+            "status": result.get("status") or job.get("state"),
+            "exit_status": result.get("exit_code") if result.get("exit_code") is not None else job.get("exit_code"),
+            "artifact_path": result.get("result_path") or job.get("result_path") or result.get("path"),
+            "artifact_sha256": (
+                result.get("result_sha256") or job.get("result_sha256")
+                or result.get("sha256") or result.get("content_sha256")
+            ),
+            "latency_ms": round((time.monotonic() - started_monotonic) * 1000, 3),
             "belief_status": "not_committed",
         }
         self.invocations.append(event)
         self.invocations[:] = self.invocations[-100:]
         self.audit_sink(event)
-        return context_result
 
     @staticmethod
     def _argument_summary(logical: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -206,6 +359,23 @@ class SealedResearchToolRegistry:
             }
         if logical == "research.publish":
             return {"run_id": str(arguments.get("run_id", ""))[:32]}
+        if logical == "repo.read":
+            return {
+                "operation": arguments.get("operation"), "path": str(arguments.get("path") or "")[:500],
+                "ref": arguments.get("ref"), "base_ref": arguments.get("base_ref"),
+                "target_ref": arguments.get("target_ref"),
+            }
+        if logical == "process.run":
+            return {"task": arguments.get("task"), "manifest_sha256": arguments.get("manifest_sha256")}
+        if logical in {"process.status", "process.stop", "system.metrics"}:
+            return {"job_id": arguments.get("job_id")}
+        if logical == "file.read":
+            return {
+                "path": str(arguments.get("path", ""))[:800], "offset": arguments.get("offset"),
+                "maximum_chars": arguments.get("maximum_chars"),
+            }
+        if logical == "file.hash":
+            return {"path": str(arguments.get("path", ""))[:800]}
         return {"text_length": len(str(arguments.get("text", "")))}
 
     @staticmethod
@@ -225,6 +395,12 @@ class SealedResearchToolRegistry:
             bounded["provenance"] = provenance[:100]
             bounded["provenance_truncated_for_context"] = len(provenance) > 100
             bounded["complete_provenance_artifact"] = bounded.get("artifact")
+        elif logical == "repo.read" and "excerpt" in bounded:
+            bounded["excerpt"] = str(bounded.get("excerpt") or "")[:16000]
+        elif logical == "file.read":
+            bounded["excerpt"] = str(bounded.get("excerpt") or "")[:32000]
+        elif logical == "process.status" and isinstance(bounded.get("jobs"), list):
+            bounded["jobs"] = bounded["jobs"][:20]
         return bounded
 
     def status(self) -> dict[str, Any]:

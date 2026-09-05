@@ -12,9 +12,20 @@ services:
       CKK_REFRESH_SECONDS: "900"
       CKK_GIT_SSH_KEY: /run/secrets/ckk_readonly_key
       CKK_GIT_KNOWN_HOSTS: /run/secrets/ckk_github_known_hosts
+      CKK_EXPERIMENT_ENABLED: "true"
+      CKK_EXPERIMENT_REPOSITORY_URL: https://github.com/robertoomezzolli-spec/ckk-main.git
+      CKK_EXPERIMENT_BRANCH: experiment/solar-system-provenance-cascade
+      CKK_EXPERIMENT_TARGET_COMMIT: 5faf926d6cc324e08c32649e1b92cf57f3c56cb3
+      CKK_EXPERIMENT_CACHE_DIRECTORY: /experiment-cache
+      CKK_EXPERIMENT_CONTROL_DIRECTORY: /experiment-control
+      CKK_EXPERIMENT_ARTIFACT_DIRECTORY: /experiment-artifacts
+      CKK_EXPERIMENT_MANIFEST_PATH: /app/sealed/fresh_seed_closure_plateau_v2_execution_manifest.json
     volumes:
       - ckk-knowledge-cache:/cache
       - ckk-run-jobs:/jobs
+      - ckk-experiment-cache:/experiment-cache
+      - ckk-experiment-control:/experiment-control
+      - ckk-experiment-artifacts:/experiment-artifacts:ro
     secrets:
       - ckk_readonly_key
       - ckk_github_known_hosts
@@ -52,6 +63,34 @@ services:
       retries: 3
       test: ["CMD", "python", "-m", "ckk.knowledge_adapter.runner_worker", "--health"]
 
+  ckk-experiment-worker:
+    image: ckk-knowledge:local
+    restart: unless-stopped
+    depends_on:
+      ckk-knowledge:
+        condition: service_healthy
+    command: ["python", "-m", "ckk.knowledge_adapter.experiment_worker"]
+    volumes:
+      - ckk-experiment-cache:/experiment-cache:ro
+      - ckk-experiment-control:/experiment-control
+      - ckk-experiment-artifacts:/experiment-artifacts
+      - ckk-experiment-workspaces:/experiment-workspaces
+    read_only: true
+    network_mode: none
+    mem_limit: 1152m
+    cpus: "0.80"
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+      test: ["CMD", "python", "-m", "ckk.knowledge_adapter.experiment_worker", "--health"]
+
   organism:
     build:
       context: .
@@ -68,6 +107,8 @@ services:
         condition: service_healthy
       ckk-runner:
         condition: service_healthy
+      ckk-experiment-worker:
+        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
@@ -82,6 +123,10 @@ volumes:
   ckk-knowledge-cache:
   ckk-run-jobs:
   ckk-run-artifacts:
+  ckk-experiment-cache:
+  ckk-experiment-control:
+  ckk-experiment-artifacts:
+  ckk-experiment-workspaces:
 
 secrets:
   ckk_readonly_key:

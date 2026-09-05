@@ -7,8 +7,13 @@ on:
     paths:
       - ".github/workflows/sovereign-deploy.yml"
       - "ckk_snapshot/ckk/sovereign/**"
+      - "ckk_snapshot/ckk/knowledge_adapter/**"
+      - "ckk_snapshot/ckk/observatory/**"
+      - "sealed/fresh_seed_closure_plateau_v2_execution_manifest.json"
       - "requirements-sovereign.txt"
       - "Dockerfile.sovereign"
+      - "Dockerfile.ckk-knowledge"
+      - "Dockerfile.observatory"
       - "docker-compose.digitalocean.yml"
       - "deploy/digitalocean/Caddyfile"
       - "deploy/digitalocean/deploy.sh"

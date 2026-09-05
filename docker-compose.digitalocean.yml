@@ -17,6 +17,14 @@ services:
       CKK_RUN_ARTIFACT_DIRECTORY: /run-artifacts
       CKK_PUBLICATION_DIRECTORY: /publications
       CKK_RESEARCH_BASE_URL: https://kairos.206-189-55-212.sslip.io/research
+      CKK_EXPERIMENT_ENABLED: "true"
+      CKK_EXPERIMENT_REPOSITORY_URL: https://github.com/robertoomezzolli-spec/ckk-main.git
+      CKK_EXPERIMENT_BRANCH: experiment/solar-system-provenance-cascade
+      CKK_EXPERIMENT_TARGET_COMMIT: 5faf926d6cc324e08c32649e1b92cf57f3c56cb3
+      CKK_EXPERIMENT_CACHE_DIRECTORY: /experiment-cache
+      CKK_EXPERIMENT_CONTROL_DIRECTORY: /experiment-control
+      CKK_EXPERIMENT_ARTIFACT_DIRECTORY: /experiment-artifacts
+      CKK_EXPERIMENT_MANIFEST_PATH: /app/sealed/fresh_seed_closure_plateau_v2_execution_manifest.json
     expose:
       - "8070"
     volumes:
@@ -24,6 +32,9 @@ services:
       - ckk-run-jobs:/jobs
       - ckk-run-artifacts:/run-artifacts:ro
       - ckk-research-publications:/publications
+      - ckk-experiment-cache:/experiment-cache
+      - ckk-experiment-control:/experiment-control
+      - ckk-experiment-artifacts:/experiment-artifacts:ro
     secrets:
       - ckk_readonly_key
       - ckk_github_known_hosts
@@ -62,6 +73,34 @@ services:
       start_period: 5s
       retries: 3
       test: ["CMD", "python", "-m", "ckk.knowledge_adapter.runner_worker", "--health"]
+
+  ckk-experiment-worker:
+    image: ckk-knowledge:local
+    restart: unless-stopped
+    depends_on:
+      ckk-knowledge:
+        condition: service_healthy
+    command: ["python", "-m", "ckk.knowledge_adapter.experiment_worker"]
+    volumes:
+      - ckk-experiment-cache:/experiment-cache:ro
+      - ckk-experiment-control:/experiment-control
+      - ckk-experiment-artifacts:/experiment-artifacts
+      - ckk-experiment-workspaces:/experiment-workspaces
+    read_only: true
+    network_mode: none
+    mem_limit: 1152m
+    cpus: "0.80"
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+      test: ["CMD", "python", "-m", "ckk.knowledge_adapter.experiment_worker", "--health"]
 
   research-site:
     image: ckk-knowledge:local
@@ -107,6 +146,8 @@ services:
       ckk-knowledge:
         condition: service_healthy
       ckk-runner:
+        condition: service_healthy
+      ckk-experiment-worker:
         condition: service_healthy
     expose:
       - "8080"
@@ -211,6 +252,10 @@ volumes:
   ckk-run-jobs:
   ckk-run-artifacts:
   ckk-research-publications:
+  ckk-experiment-cache:
+  ckk-experiment-control:
+  ckk-experiment-artifacts:
+  ckk-experiment-workspaces:
   caddy-data:
   caddy-config:
 

@@ -11,8 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r requirements-knowledge.txt
 COPY ckk_snapshot/ckk/knowledge_adapter ./ckk_snapshot/ckk/knowledge_adapter
-RUN mkdir -p /cache /jobs /artifacts /run-artifacts /publications && useradd --system --uid 10003 knowledge && \
-    chown -R knowledge:knowledge /cache /jobs /artifacts /run-artifacts /publications
+COPY sealed/fresh_seed_closure_plateau_v2_execution_manifest.json ./sealed/fresh_seed_closure_plateau_v2_execution_manifest.json
+RUN mkdir -p /cache /jobs /artifacts /run-artifacts /publications /experiment-cache /experiment-control \
+    /experiment-artifacts /experiment-workspaces && useradd --system --uid 10003 knowledge && \
+    chown -R knowledge:knowledge /cache /jobs /artifacts /run-artifacts /publications /experiment-cache \
+    /experiment-control /experiment-artifacts /experiment-workspaces && \
+    chmod 0444 /app/sealed/fresh_seed_closure_plateau_v2_execution_manifest.json
 
 USER knowledge
 EXPOSE 8070

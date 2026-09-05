@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "experiment_id": "fresh-seed-closure-plateau-v2",
+  "repository": "https://github.com/robertoomezzolli-spec/ckk-main",
+  "branch": "experiment/solar-system-provenance-cascade",
+  "target_commit": "5faf926d6cc324e08c32649e1b92cf57f3c56cb3",
+  "experiment_entry_point": "experiments/fresh_seed_closure_plateau_gate_v2_run.py",
+  "preregistration_path": "experiments/PREREG_FRESH_SEED_CLOSURE_PLATEAU_V2.md",
+  "python": {
+    "version": "3.12",
+    "experiment_dependencies": "Python standard library only"
+  },
+  "generator": {
+    "kernel_or_grammar_modified": false,
+    "fresh_initial_carrier_occupancies": [2, 3],
+    "levels": 12,
+    "state_cap": 100000,
+    "horizons": [2, 3, 4, 5, 6, 7],
+    "compression_lag": 3,
+    "state_cap_hit_invalidates_confirmation_for_context": true
+  },
+  "closure_completion_specificity": {
+    "horizons": [2, 3, 4],
+    "base_kinds": ["BOUNDARY", "CYCLE", "PRODUCT"],
+    "minimum_n_per_kind": 3,
+    "boundary_minus_cycle_minimum_mean_opening_bits": 0.25,
+    "boundary_minus_product_minimum_mean_opening_bits": 0.25,
+    "maximum_one_sided_pairwise_permutation_p": 0.01,
+    "permutations_per_preregistered_test": 4000
+  },
+  "nonzero_plateau": {
+    "base_kind": "BOUNDARY",
+    "horizons": [5, 6, 7],
+    "minimum_n_per_horizon": 5,
+    "maximum_range_bits": 0.05,
+    "minimum_mean_bits": 0.15,
+    "zero_plateau_passes": false
+  },
+  "floor_corrected_pressure_opening_coupling": {
+    "base_kind": "BOUNDARY",
+    "horizons": [2, 3],
+    "minimum_n_per_horizon": 20,
+    "minimum_observed_rho": 0.25,
+    "minimum_rho_excess_over_null_median": 0.20,
+    "maximum_one_sided_permutation_p": 0.01,
+    "permutations_per_preregistered_test": 4000,
+    "null": "For each row keep pressure_i and floor_i=-log2(Omega_source) fixed exactly; randomly permute only headroom_i=log2(Omega_target), which is nonnegative.",
+    "diagnostic_only_controls": ["CYCLE", "PRODUCT"]
+  },
+  "reporting": {
+    "separate_statuses": [
+      "closure-completion specificity",
+      "nonzero H5-H7 plateau",
+      "floor-corrected pressure/opening coupling"
+    ],
+    "post_hoc_composite_jump_status_allowed": false,
+    "previous_jump_gate_status_remains": "RED"
+  },
+  "equivalence_gate": {
+    "module": "experiments/fresh_seed_closure_plateau_gate_v2_fast.py",
+    "function": "prove_equivalence",
+    "reference_levels": 4,
+    "reference_state_cap": 20000,
+    "fresh_initial_carrier_occupancies": [2, 3],
+    "required_equalities": [
+      "structural state set",
+      "first-seen levels",
+      "deduplicated graph edge set",
+      "op_fiber base-to-target set",
+      "unique event count",
+      "state-cap status"
+    ],
+    "failure_policy": "Return a non-zero exit status and prohibit the full experiment."
+  },
+  "source_files": [
+    {
+      "path": "experiments/PREREG_FRESH_SEED_CLOSURE_PLATEAU_V2.md",
+      "sha256": "ff98ca4b298c06829450f11d0ae2f246e58efa852d6f0774ba832acef2fef5a5"
+    },
+    {
+      "path": "experiments/fresh_seed_closure_plateau_gate_v2_run.py",
+      "sha256": "5a76ebc51f633ddfecf71d16ea74ea85bf964500ab90dbcc6ad2ef9bb8ace3ba"
+    },
+    {
+      "path": "experiments/fresh_seed_closure_plateau_gate_v2_fast.py",
+      "sha256": "3e47e87f7b4e5117c91ad7862f0678c80336aeba7610f7eda319f5aa0e9c06c5"
+    },
+    {
+      "path": "experiments/fresh_seed_closure_plateau_gate_v2.py",
+      "sha256": "5f5ac5b439335cff9aae11c7c98d6dde767d852b81131b3314fe79ca8e72316d"
+    },
+    {
+      "path": "experiments/fresh_seed_fiber_jump_gate.py",
+      "sha256": "66650571b61cedf5bb5b7bab3badc3d5ea3b69530ab1530c64d1551a23876198"
+    },
+    {
+      "path": "ckk_snapshot/ckk/gen/grammar.py",
+      "sha256": "afd52bc69b014d418826c400d2eb5e159ca41fb3e60fee68f8da90dcf18e89da"
+    },
+    {
+      "path": "ckk_snapshot/ckk/gen/expand.py",
+      "sha256": "f752f0533c2640dcc9cb4cd2aca12eb4457e6339dfb55becc75f711a95939d5e"
+    },
+    {
+      "path": ".github/workflows/fresh-seed-closure-plateau-v2.yml",
+      "sha256": "82608c1b9b8201fe8396c78890a79383b407aa67e21b44a3fb2c2d67fcd929b9"
+    }
+  ],
+  "freeze_statement": "No hypothesis, threshold, horizon, initial condition, null, permutation count, or inclusion rule may be changed after execution begins."
+}

@@ -138,6 +138,62 @@ class CKKKnowledgeClient:
         self._record_success(result)
         return result
 
+    def experiment_repo(
+        self,
+        operation: str,
+        *,
+        path: str | None = None,
+        ref: str | None = None,
+        base_ref: str | None = None,
+        target_ref: str | None = None,
+    ) -> dict[str, Any]:
+        result = self._request("/v1/experiment/repo", {
+            "operation": operation,
+            "path": path,
+            "ref": ref,
+            "base_ref": base_ref,
+            "target_ref": target_ref,
+        })
+        result.setdefault("belief_status", "not_committed")
+        return result
+
+    def experiment_process_run(self, task: str, manifest_sha256: str) -> dict[str, Any]:
+        result = self._request("/v1/experiment/process/run", {
+            "task": task,
+            "manifest_sha256": manifest_sha256,
+        })
+        result.setdefault("belief_status", "not_committed")
+        return result
+
+    def experiment_process_status(self, job_id: str | None = None) -> dict[str, Any]:
+        result = self._request("/v1/experiment/process/status", {"job_id": job_id})
+        result.setdefault("belief_status", "not_committed")
+        return result
+
+    def experiment_process_stop(self, job_id: str) -> dict[str, Any]:
+        result = self._request("/v1/experiment/process/stop", {"job_id": job_id})
+        result.setdefault("belief_status", "not_committed")
+        return result
+
+    def experiment_file_read(self, path: str, offset: int, maximum_chars: int) -> dict[str, Any]:
+        result = self._request("/v1/experiment/file/read", {
+            "path": path,
+            "offset": offset,
+            "maximum_chars": maximum_chars,
+        })
+        result.setdefault("belief_status", "not_committed")
+        return result
+
+    def experiment_file_hash(self, path: str) -> dict[str, Any]:
+        result = self._request("/v1/experiment/file/hash", {"path": path})
+        result.setdefault("belief_status", "not_committed")
+        return result
+
+    def experiment_system_metrics(self, job_id: str | None = None) -> dict[str, Any]:
+        result = self._request("/v1/experiment/system/metrics", {"job_id": job_id})
+        result.setdefault("belief_status", "not_committed")
+        return result
+
     def _record_success(self, result: dict[str, Any]) -> None:
         self.last_commit_sha = str(result.get("commit_sha") or "") or self.last_commit_sha
         self.last_error_type = None

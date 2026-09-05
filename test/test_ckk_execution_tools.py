@@ -50,6 +50,33 @@ class FakeCKK:
                 "publication_url": f"https://example.test/research/{run_id}", "classification": "DIRECT",
                 "controls_completed": True, "status": "published", "source_kind": "GENERATED_RUN"}
 
+    def experiment_repo(self, operation, **kwargs):
+        return {"status": "ready", "operation": operation,
+                "repository": "https://github.com/robertoomezzolli-spec/ckk-main",
+                "commit_sha": SHA, "belief_status": "not_committed"}
+
+    def experiment_process_run(self, task, manifest_sha256):
+        return {"status": "queued", "task": task, "manifest_sha256": manifest_sha256,
+                "job_id": "d" * 32, "commit_sha": SHA, "belief_status": "not_committed"}
+
+    def experiment_process_status(self, job_id=None):
+        return {"status": "completed", "job": {"job_id": job_id, "state": "RUNNING"},
+                "belief_status": "not_committed"}
+
+    def experiment_process_stop(self, job_id):
+        return {"status": "stop_requested", "job_id": job_id, "belief_status": "not_committed"}
+
+    def experiment_file_read(self, path, offset, maximum_chars):
+        return {"status": "completed", "path": path, "excerpt": "artifact",
+                "belief_status": "not_committed"}
+
+    def experiment_file_hash(self, path):
+        return {"status": "completed", "path": path, "sha256": "e" * 64,
+                "belief_status": "not_committed"}
+
+    def experiment_system_metrics(self, job_id=None):
+        return {"status": "completed", "job_id": job_id, "belief_status": "not_committed"}
+
 
 class ScriptedResponses:
     def __init__(self):
@@ -116,12 +143,18 @@ class CKKExecutionToolTests(unittest.TestCase):
         self.assertEqual([item["logical_name"] for item in outcome["trace"]["calls"]],
                          ["ckk.search", "ckk.read", "ckk.run"])
         first = responses.calls[0]
-        self.assertEqual([item["name"] for item in first["tools"]], ["whatsapp", "ckk", "research"])
+        self.assertEqual(
+            [item["name"] for item in first["tools"]],
+            ["whatsapp", "ckk", "research", "repo", "process", "file", "system"],
+        )
         self.assertEqual([item["name"] for item in first["tools"][1]["tools"]],
                          ["search", "read", "symbol", "run"])
         self.assertIn("whatsapp.send", outcome["trace"]["capabilities"])
         self.assertIn("ckk.run", outcome["trace"]["capabilities"])
         self.assertIn("research.publish", outcome["trace"]["capabilities"])
+        self.assertIn("repo.read", outcome["trace"]["capabilities"])
+        self.assertIn("process.run", outcome["trace"]["capabilities"])
+        self.assertIn("system.metrics", outcome["trace"]["capabilities"])
         self.assertEqual(first["parallel_tool_calls"], False)
         self.assertTrue(any(
             isinstance(item, dict) and item.get("type") == "function_call_output"
@@ -157,12 +190,29 @@ class CKKExecutionToolTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             registry.execute("shell", {"command": "id"})
 
+    def test_operational_capabilities_have_no_shell_or_arbitrary_command_argument(self):
+        registry = SealedResearchToolRegistry(FakeCKK())
+        definitions = {item["name"]: item for item in registry.definitions}
+        process = {item["name"]: item for item in definitions["process"]["tools"]}
+        self.assertEqual(
+            process["run"]["parameters"]["properties"]["task"]["enum"],
+            ["supervisor_smoke", "equivalence_validation", "fresh_seed_closure_plateau_v2"],
+        )
+        serialized = json.dumps([definitions[name] for name in ("repo", "process", "file", "system")])
+        self.assertNotIn('"command"', serialized)
+        self.assertNotIn('"repository_url"', serialized)
+        result = registry.execute(
+            "run", {"task": "equivalence_validation", "manifest_sha256": "f" * 64}, namespace="process"
+        )
+        self.assertEqual(result["status"], "queued")
+        self.assertEqual(registry.invocations[-1]["logical_name"], "process.run")
+
     def test_research_publish_is_sealed_to_run_id(self):
         registry = SealedResearchToolRegistry(FakeCKK())
         result = registry.execute("publish", {"run_id": "b" * 32}, namespace="research")
         self.assertEqual(result["publication_url"], f"https://example.test/research/{'b' * 32}")
         self.assertEqual(registry.invocations[-1]["logical_name"], "research.publish")
-        definition = registry.definitions[-1]
+        definition = next(item for item in registry.definitions if item["name"] == "research")
         self.assertEqual(definition["name"], "research")
         self.assertEqual([item["name"] for item in definition["tools"]], ["publish"])
 

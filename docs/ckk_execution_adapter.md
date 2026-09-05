@@ -27,3 +27,7 @@ No shell, Git write, arbitrary filesystem, or network operation is exposed to
 the model. `whatsapp.send` in the model registry is a deferred proposal; the
 existing runtime capability policy and actuator remain authoritative for any
 real outbound message.
+
+The separate frozen-experiment supervisor is documented in
+`docs/ckk_experiment_supervisor.md`. It adds structured `repo`, `process`,
+`file`, and `system` namespaces; it does not widen `ckk.run` or expose a shell.
