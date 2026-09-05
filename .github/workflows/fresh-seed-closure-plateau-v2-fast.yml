@@ -1,0 +1,31 @@
+name: fresh-seed-closure-plateau-v2-fast
+
+# Same frozen scientific V2 preregistration. This workflow uses only a
+# semantics-preserving incremental expander and refuses to run unless it first
+# reproduces the original expander exactly at the audit depth.
+on:
+  push:
+    branches:
+      - experiment/solar-system-provenance-cascade
+    paths:
+      - 'experiments/fresh_seed_closure_plateau_gate_v2_fast.py'
+      - '.github/workflows/fresh-seed-closure-plateau-v2-fast.yml'
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify expansion equivalence and run frozen V2
+        run: python experiments/fresh_seed_closure_plateau_gate_v2_fast.py
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-seed-closure-plateau-v2-fast-result
+          path: results/fresh_seed_closure_plateau_gate_v2.json
+          if-no-files-found: error
