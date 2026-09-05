@@ -125,6 +125,7 @@ class RepoOperationRequest(BaseModel):
 class ProcessRunRequest(BaseModel):
     task: Literal["supervisor_smoke", "equivalence_validation", "fresh_seed_closure_plateau_v2"]
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    retry_of: str | None = Field(default=None, pattern=r"^[0-9a-f]{32}$")
 
 
 class ProcessJobRequest(BaseModel):
@@ -318,7 +319,7 @@ def create_app(
     async def experiment_process_run(request: ProcessRunRequest, authorization: str = Header(default="")):
         authorize(authorization)
         operations = require_experiment()
-        return await experiment_call(operations.start, request.task, request.manifest_sha256)
+        return await experiment_call(operations.start, request.task, request.manifest_sha256, request.retry_of)
 
     @app.post("/v1/experiment/process/status")
     async def experiment_process_status(request: ProcessJobRequest, authorization: str = Header(default="")):

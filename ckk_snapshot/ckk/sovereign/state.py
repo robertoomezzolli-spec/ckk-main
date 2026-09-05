@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import json
+import re
 import sqlite3
 import threading
 import time
@@ -67,6 +68,11 @@ class SQLiteStateStore:
                     operator_names_json TEXT NOT NULL,
                     latency_ms REAL NOT NULL,
                     belief_status TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS experiment_job_bindings (
+                    job_id TEXT PRIMARY KEY,
+                    recipient TEXT NOT NULL,
+                    created_at INTEGER NOT NULL
                 );
                 """
             )
@@ -172,6 +178,31 @@ class SQLiteStateStore:
     def tool_invocation_count(self) -> int:
         with self._lock:
             return int(self._db.execute("SELECT COUNT(*) FROM tool_invocations").fetchone()[0])
+
+    def bind_experiment_job(self, job_id: str, recipient: str) -> None:
+        """Bind a sealed job to its originating admitted reply channel without exposing it to artifacts."""
+
+        if not re.fullmatch(r"[0-9a-f]{32}", job_id):
+            raise ValueError("invalid experiment job ID")
+        if not recipient or len(recipient) > 64:
+            raise ValueError("invalid experiment notification recipient")
+        with self._lock, self._db:
+            existing = self._db.execute(
+                "SELECT recipient FROM experiment_job_bindings WHERE job_id=?", (job_id,)
+            ).fetchone()
+            if existing is not None and existing["recipient"] != recipient:
+                raise PermissionError("experiment job notification recipient cannot be changed")
+            self._db.execute(
+                "INSERT OR IGNORE INTO experiment_job_bindings(job_id,recipient,created_at) VALUES(?,?,?)",
+                (job_id, recipient, int(time.time())),
+            )
+
+    def experiment_job_recipient(self, job_id: str) -> str | None:
+        with self._lock:
+            row = self._db.execute(
+                "SELECT recipient FROM experiment_job_bindings WHERE job_id=?", (job_id,)
+            ).fetchone()
+        return str(row["recipient"]) if row is not None else None
 
     def communication_state(self) -> tuple[dict[str, int], list[int]]:
         """Recover service-window and proactive budget state after restart."""

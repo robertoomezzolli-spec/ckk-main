@@ -203,6 +203,18 @@ class SovereignBrainHostingTests(unittest.TestCase):
             self.assertEqual(restored.runtime.memory[0].observation_ids, ("tick:1",))
             self.assertEqual(len(store.recent_episodes()), 1)
 
+    def test_experiment_job_binding_is_persistent_and_cannot_be_redirected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(Path(directory) / "state.sqlite3")
+            job_id = "a" * 32
+            store = SQLiteStateStore(path)
+            store.bind_experiment_job(job_id, OWNER)
+            self.assertEqual(store.experiment_job_recipient(job_id), OWNER)
+            with self.assertRaises(PermissionError):
+                store.bind_experiment_job(job_id, "491709999999")
+            reopened = SQLiteStateStore(path)
+            self.assertEqual(reopened.experiment_job_recipient(job_id), OWNER)
+
 
 if __name__ == "__main__":
     unittest.main()

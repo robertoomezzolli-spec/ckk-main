@@ -3,6 +3,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
+if [[ "$(id -u)" -eq 0 ]]; then
+  ./deploy/digitalocean/ensure-experiment-swap.sh
+fi
+
 for file in .env.sovereign .env.digitalocean .env.observatory .env.observatory-ingest .env.ckk-knowledge; do
   if [[ ! -f "$file" ]]; then
     echo "Missing $file" >&2

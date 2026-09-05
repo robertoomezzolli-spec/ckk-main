@@ -67,6 +67,46 @@ def _event_ref(event_id: str) -> str:
     return hashlib.sha256(event_id.encode()).hexdigest()[:12]
 
 
+EXPERIMENT_TERMINAL_STATES = frozenset({
+    "COMPLETED", "FAILED", "FAILED_EQUIVALENCE", "STOPPED", "TIMED_OUT",
+    "MEMORY_LIMIT", "OOM_KILLED", "INTERRUPTED",
+})
+
+
+def experiment_completion_observation(job: dict[str, Any], recipient: str) -> Observation:
+    """Create an ordinary operational status event; no Observatory data or artifact content is included."""
+
+    job_id = str(job.get("job_id") or "")
+    state = str(job.get("state") or "")
+    if state not in EXPERIMENT_TERMINAL_STATES or len(job_id) != 32:
+        raise ValueError("experiment completion requires a terminal sealed job")
+    return Observation(
+        observation_id=(
+            f"experiment-job:{job_id}:{state}:"
+            f"{job.get('result_sha256') or job.get('exit_code')}"
+        ),
+        sensor=f"whatsapp:{recipient}",
+        kind="message.experiment_status",
+        payload={
+            "source": "sealed_experiment_supervisor",
+            "job_id": job_id,
+            "task": job.get("task"),
+            "state": state,
+            "commit_sha": job.get("commit_sha"),
+            "manifest_sha256": job.get("manifest_sha256"),
+            "exit_code": job.get("exit_code"),
+            "termination_class": job.get("termination_class"),
+            "runtime_seconds": job.get("runtime_seconds"),
+            "peak_rss_bytes": job.get("peak_rss_bytes"),
+            "result_path": job.get("result_path"),
+            "result_sha256": job.get("result_sha256"),
+            "equivalence_passed": job.get("equivalence_passed"),
+            "content_exported": False,
+        },
+        trust=1.0,
+    )
+
+
 @dataclass(frozen=True)
 class HostSettings:
     owner_wa_id: str
@@ -148,7 +188,7 @@ def build_organism(
             frozenset({"internal.clock", "ckk.repository", *(f"whatsapp:{item}" for item in config.admitted_wa_ids)}),
             frozenset({
                 "clock.tick", "message.text", "message.document", "message.image", "message.audio",
-                "evidence.source",
+                "message.experiment_status", "evidence.source",
             }),
             maximum_payload_bytes=64 * 1024,
         ),
@@ -232,6 +272,13 @@ def create_app(
         )
 
     organism.cognition.tool_registry.audit_sink = record_tool_event
+
+    def bind_experiment_job(job_id: str, recipient: str) -> None:
+        if recipient not in inbox.config.admitted_wa_ids:
+            raise PermissionError("experiment notification recipient is not admitted")
+        store.bind_experiment_job(job_id, recipient)
+
+    organism.cognition.tool_registry.job_binding_sink = bind_experiment_job
     app = FastAPI(title="Sovereign Fixpoint Organism", docs_url=None, redoc_url=None)
     stop = asyncio.Event()
     cognition_lock = threading.Lock()
@@ -381,27 +428,36 @@ def create_app(
                         job.get("state"), job.get("started_at"), job.get("finished_at"),
                         job.get("exit_code"), job.get("result_sha256"),
                     )
-                    if seen.get(str(job["job_id"])) == signature:
-                        continue
-                    seen[str(job["job_id"])] = signature
-                    telemetry.emit(
-                        "EXPERIMENT_JOB_STATE",
-                        {
-                            "capability": "process.run",
-                            "job_id": job.get("job_id"),
-                            "operation": job.get("task"),
-                            "start_time": job.get("started_at"),
-                            "finish_time": job.get("finished_at"),
-                            "status": job.get("state"),
-                            "exit_status": job.get("exit_code"),
-                            "termination_class": job.get("termination_class"),
-                            "artifact_path": job.get("result_path"),
-                            "artifact_sha256": job.get("result_sha256"),
-                            "peak_rss_bytes": job.get("peak_rss_bytes"),
-                            "runtime_seconds": job.get("runtime_seconds"),
-                            "content_exported": False,
-                        },
-                    )
+                    job_id = str(job["job_id"])
+                    if seen.get(job_id) != signature:
+                        seen[job_id] = signature
+                        telemetry.emit(
+                            "EXPERIMENT_JOB_STATE",
+                            {
+                                "capability": "process.run",
+                                "job_id": job.get("job_id"),
+                                "operation": job.get("task"),
+                                "start_time": job.get("started_at"),
+                                "finish_time": job.get("finished_at"),
+                                "status": job.get("state"),
+                                "exit_status": job.get("exit_code"),
+                                "termination_class": job.get("termination_class"),
+                                "artifact_path": job.get("result_path"),
+                                "artifact_sha256": job.get("result_sha256"),
+                                "peak_rss_bytes": job.get("peak_rss_bytes"),
+                                "runtime_seconds": job.get("runtime_seconds"),
+                                "content_exported": False,
+                            },
+                        )
+                    recipient = store.experiment_job_recipient(job_id)
+                    if recipient and job.get("state") in EXPERIMENT_TERMINAL_STATES:
+                        completion = experiment_completion_observation(job, recipient)
+                        if store.enqueue((completion,)):
+                            logger.info(
+                                "experiment completion queued job_ref=%s state=%s",
+                                _event_ref(job_id),
+                                job.get("state"),
+                            )
             except Exception as exc:
                 logger.warning("experiment observer unavailable error_type=%s", type(exc).__name__)
             await asyncio.sleep(10)

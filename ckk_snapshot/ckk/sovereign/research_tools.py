@@ -136,18 +136,26 @@ PROCESS_NAMESPACE: dict[str, Any] = {
             "description": (
                 "Logical capability process.run. Queue a supervisor smoke test, the mandatory brute-force "
                 "equivalence validation, or the frozen full experiment. Full execution is rejected until matching "
-                "equivalence evidence exists."
+                "equivalence evidence exists. Jobs are persistent and completion is delivered as a later ordinary "
+                "status event. Call once, then return a short acknowledgement; do not poll in the same WAKE."
             ),
             "parameters": _object({
                 "task": {"type": "string", "enum": [
                     "supervisor_smoke", "equivalence_validation", "fresh_seed_closure_plateau_v2"
                 ]},
                 "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-            }, ["task", "manifest_sha256"]),
+                "retry_of": {
+                    "type": ["string", "null"], "pattern": "^[0-9a-f]{32}$",
+                    "description": "A matching failed job ID only when explicitly retrying; otherwise null.",
+                },
+            }, ["task", "manifest_sha256", "retry_of"]),
         },
         {
             "type": "function", "name": "status", "strict": True,
-            "description": "Logical capability process.status. Read one job or the recent job list and explicit termination class.",
+            "description": (
+                "Logical capability process.status. Read one job or the recent job list and explicit termination "
+                "class. For a running persistent job, inspect once and return to the user; never busy-poll in one WAKE."
+            ),
             "parameters": _object({"job_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{32}$"}}, ["job_id"]),
         },
         {
@@ -196,6 +204,7 @@ SYSTEM_NAMESPACE: dict[str, Any] = {
 class SealedResearchToolRegistry:
     ckk: CKKKnowledgeClient
     audit_sink: Callable[[dict[str, Any]], None] = lambda event: None
+    job_binding_sink: Callable[[str, str], None] = lambda job_id, recipient: None
     invocations: list[dict[str, Any]] = field(default_factory=list)
 
     @property
@@ -278,9 +287,35 @@ class SealedResearchToolRegistry:
                     base_ref=arguments.get("base_ref"), target_ref=arguments.get("target_ref"),
                 )
             elif logical == "process.run":
-                result = self.ckk.experiment_process_run(arguments["task"], arguments["manifest_sha256"])
+                result = self.ckk.experiment_process_run(
+                    arguments["task"], arguments["manifest_sha256"], arguments.get("retry_of")
+                )
+                if reply_to and result.get("job_id"):
+                    self.job_binding_sink(str(result["job_id"]), reply_to)
+                result = {
+                    **result,
+                    "persistent_job": True,
+                    "completion_notification_scheduled": bool(reply_to and result.get("job_id")),
+                    "same_wake_polling_prohibited": True,
+                    "required_next_action": (
+                        "Return a short service_message with the job ID and current state now. "
+                        "Do not call process.status or system.metrics again in this WAKE; a completion event will arrive."
+                    ),
+                }
             elif logical == "process.status":
                 result = self.ckk.experiment_process_status(arguments.get("job_id"))
+                job = result.get("job") if isinstance(result.get("job"), dict) else {}
+                if reply_to and job.get("job_id"):
+                    self.job_binding_sink(str(job["job_id"]), reply_to)
+                if job.get("state") not in {"COMPLETED", "FAILED", "FAILED_EQUIVALENCE", "STOPPED", "TIMED_OUT", "MEMORY_LIMIT", "OOM_KILLED", "INTERRUPTED"}:
+                    result = {
+                        **result,
+                        "same_wake_polling_prohibited": True,
+                        "required_next_action": (
+                            "Return the current persistent job state to the user now. Do not poll again in this WAKE; "
+                            "a completion event will arrive."
+                        ),
+                    }
             elif logical == "process.stop":
                 result = self.ckk.experiment_process_stop(arguments["job_id"])
             elif logical == "file.read":
@@ -366,7 +401,10 @@ class SealedResearchToolRegistry:
                 "target_ref": arguments.get("target_ref"),
             }
         if logical == "process.run":
-            return {"task": arguments.get("task"), "manifest_sha256": arguments.get("manifest_sha256")}
+            return {
+                "task": arguments.get("task"), "manifest_sha256": arguments.get("manifest_sha256"),
+                "retry_of": arguments.get("retry_of"),
+            }
         if logical in {"process.status", "process.stop", "system.metrics"}:
             return {"job_id": arguments.get("job_id")}
         if logical == "file.read":

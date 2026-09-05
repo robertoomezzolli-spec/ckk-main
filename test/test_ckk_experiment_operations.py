@@ -123,7 +123,11 @@ class ExperimentOperationsTests(unittest.TestCase):
         self.assertRegex(queued["job_id"], r"^[0-9a-f]{32}$")
         request = json.loads((self.root / "control" / "requests" / f"{queued['job_id']}.json").read_text())
         self.assertEqual(request["task"], "supervisor_smoke")
+        self.assertIsNone(request["retry_of"])
         self.assertNotIn("command", request)
+        repeated = self.ops.start("supervisor_smoke", digest)
+        self.assertEqual(repeated["status"], "existing_job")
+        self.assertEqual(repeated["job_id"], queued["job_id"])
         with self.assertRaises(ValueError):
             self.ops.start("arbitrary_shell", digest)
         request_path = self.root / "control" / "requests" / f"{queued['job_id']}.json"
@@ -155,6 +159,31 @@ class ExperimentOperationsTests(unittest.TestCase):
         metrics = self.ops.metrics(queued["job_id"])
         self.assertFalse(metrics["kernel_log_access"])
         self.assertIn("artifact_disk", metrics)
+
+    def test_full_run_is_idempotent_and_failed_retry_requires_explicit_provenance(self):
+        digest = self.ops.manifest()["manifest_sha256"]
+        self.ops.repo("checkout", ref=self.commit)
+        equivalence = self.ops.start("equivalence_validation", digest)
+        (self.root / "control" / "requests" / f"{equivalence['job_id']}.json").unlink()
+        equivalence_path = self.root / "control" / "status" / f"{equivalence['job_id']}.json"
+        equivalence_status = json.loads(equivalence_path.read_text())
+        equivalence_status.update({"state": "COMPLETED", "equivalence_passed": True})
+        equivalence_path.write_text(json.dumps(equivalence_status))
+
+        first = self.ops.start("fresh_seed_closure_plateau_v2", digest)
+        (self.root / "control" / "requests" / f"{first['job_id']}.json").unlink()
+        first_path = self.root / "control" / "status" / f"{first['job_id']}.json"
+        first_status = json.loads(first_path.read_text())
+        first_status.update({"state": "MEMORY_LIMIT", "termination_class": "COMPUTATIONAL_LIMIT_ADDRESS_SPACE"})
+        first_path.write_text(json.dumps(first_status))
+
+        repeated = self.ops.start("fresh_seed_closure_plateau_v2", digest)
+        self.assertEqual(repeated["status"], "existing_job")
+        self.assertEqual(repeated["job_id"], first["job_id"])
+        self.assertTrue(repeated["retry_available"])
+        retried = self.ops.start("fresh_seed_closure_plateau_v2", digest, retry_of=first["job_id"])
+        self.assertNotEqual(retried["job_id"], first["job_id"])
+        self.assertEqual(retried["retry_of"], first["job_id"])
 
 
 if __name__ == "__main__":

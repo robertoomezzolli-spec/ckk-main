@@ -157,10 +157,13 @@ class CKKKnowledgeClient:
         result.setdefault("belief_status", "not_committed")
         return result
 
-    def experiment_process_run(self, task: str, manifest_sha256: str) -> dict[str, Any]:
+    def experiment_process_run(
+        self, task: str, manifest_sha256: str, retry_of: str | None = None
+    ) -> dict[str, Any]:
         result = self._request("/v1/experiment/process/run", {
             "task": task,
             "manifest_sha256": manifest_sha256,
+            "retry_of": retry_of,
         })
         result.setdefault("belief_status", "not_committed")
         return result

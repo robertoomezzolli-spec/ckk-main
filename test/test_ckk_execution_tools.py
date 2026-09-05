@@ -55,9 +55,10 @@ class FakeCKK:
                 "repository": "https://github.com/robertoomezzolli-spec/ckk-main",
                 "commit_sha": SHA, "belief_status": "not_committed"}
 
-    def experiment_process_run(self, task, manifest_sha256):
+    def experiment_process_run(self, task, manifest_sha256, retry_of=None):
         return {"status": "queued", "task": task, "manifest_sha256": manifest_sha256,
-                "job_id": "d" * 32, "commit_sha": SHA, "belief_status": "not_committed"}
+                "job_id": "d" * 32, "commit_sha": SHA, "retry_of": retry_of,
+                "belief_status": "not_committed"}
 
     def experiment_process_status(self, job_id=None):
         return {"status": "completed", "job": {"job_id": job_id, "state": "RUNNING"},
@@ -191,7 +192,10 @@ class CKKExecutionToolTests(unittest.TestCase):
             registry.execute("shell", {"command": "id"})
 
     def test_operational_capabilities_have_no_shell_or_arbitrary_command_argument(self):
-        registry = SealedResearchToolRegistry(FakeCKK())
+        bindings = []
+        registry = SealedResearchToolRegistry(
+            FakeCKK(), job_binding_sink=lambda job_id, recipient: bindings.append((job_id, recipient))
+        )
         definitions = {item["name"]: item for item in registry.definitions}
         process = {item["name"]: item for item in definitions["process"]["tools"]}
         self.assertEqual(
@@ -202,9 +206,14 @@ class CKKExecutionToolTests(unittest.TestCase):
         self.assertNotIn('"command"', serialized)
         self.assertNotIn('"repository_url"', serialized)
         result = registry.execute(
-            "run", {"task": "equivalence_validation", "manifest_sha256": "f" * 64}, namespace="process"
+            "run", {
+                "task": "equivalence_validation", "manifest_sha256": "f" * 64, "retry_of": None,
+            }, namespace="process", reply_to="491701234567", service_available=True,
         )
         self.assertEqual(result["status"], "queued")
+        self.assertTrue(result["same_wake_polling_prohibited"])
+        self.assertTrue(result["completion_notification_scheduled"])
+        self.assertEqual(bindings, [("d" * 32, "491701234567")])
         self.assertEqual(registry.invocations[-1]["logical_name"], "process.run")
 
     def test_research_publish_is_sealed_to_run_id(self):

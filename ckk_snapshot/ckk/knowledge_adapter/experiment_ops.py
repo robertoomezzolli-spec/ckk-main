@@ -47,7 +47,7 @@ OPERATIONAL_LIMITS: dict[str, dict[str, int]] = {
     "fresh_seed_closure_plateau_v2": {
         "wall_seconds": 14400,
         "cpu_seconds": 13800,
-        "memory_mb": 1024,
+        "memory_mb": 4096,
         "file_size_mb": 512,
         "processes": 16,
     },
@@ -250,7 +250,23 @@ class ExperimentOperations:
         path = self.control / "selected.json"
         return _read_json(path) if path.is_file() else {}
 
-    def start(self, task: str, manifest_sha256: str) -> dict[str, Any]:
+    def _job_records(self, limit: int | None = None) -> list[dict[str, Any]]:
+        paths = sorted(
+            (self.control / "status").glob("*.json"),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        )
+        if limit is not None:
+            paths = paths[:limit]
+        jobs: list[dict[str, Any]] = []
+        for path in paths:
+            try:
+                jobs.append(_read_json(path))
+            except (OSError, ValueError, json.JSONDecodeError):
+                continue
+        return jobs
+
+    def start(self, task: str, manifest_sha256: str, retry_of: str | None = None) -> dict[str, Any]:
         if task not in TASKS:
             raise ValueError("task is not allowlisted")
         if not SHA256.fullmatch(str(manifest_sha256)):
@@ -263,7 +279,51 @@ class ExperimentOperations:
             raise PermissionError("select the exact frozen target commit before starting a job")
         if task == "fresh_seed_closure_plateau_v2" and not self._equivalence_passed(manifest_sha256):
             raise PermissionError("a completed matching equivalence validation is required before the full experiment")
-        running = [item for item in self.status()["jobs"] if item.get("state") not in TERMINAL_STATES]
+
+        limits = dict(OPERATIONAL_LIMITS[task])
+        jobs = self._job_records()
+        matching = [
+            item for item in jobs
+            if item.get("task") == task
+            and item.get("commit_sha") == self.settings.target_commit
+            and item.get("manifest_sha256") == manifest_sha256
+            and item.get("operational_compute_limits") == limits
+        ]
+        if retry_of is not None:
+            if not JOB_ID.fullmatch(str(retry_of)):
+                raise ValueError("invalid retry job ID")
+            prior = next((item for item in jobs if item.get("job_id") == retry_of), None)
+            if prior is None:
+                raise FileNotFoundError("retry source job does not exist")
+            if (
+                prior.get("task") != task
+                or prior.get("commit_sha") != self.settings.target_commit
+                or prior.get("manifest_sha256") != manifest_sha256
+                or prior.get("state") not in TERMINAL_STATES
+                or prior.get("state") == "COMPLETED"
+            ):
+                raise PermissionError("retry source must be a matching terminal non-completed job")
+        elif matching:
+            existing = matching[0]
+            state = str(existing.get("state"))
+            if state not in TERMINAL_STATES or state == "COMPLETED" or task == "fresh_seed_closure_plateau_v2":
+                return {
+                    "status": "existing_job",
+                    "job_id": existing.get("job_id"),
+                    "task": task,
+                    "state": state,
+                    "repository": self.repository,
+                    "commit_sha": self.settings.target_commit,
+                    "manifest_sha256": manifest_sha256,
+                    "operational_compute_limits": limits,
+                    "result_path": existing.get("result_path"),
+                    "result_sha256": existing.get("result_sha256"),
+                    "termination_class": existing.get("termination_class"),
+                    "retry_available": state in TERMINAL_STATES and state != "COMPLETED",
+                    "belief_status": "not_committed",
+                }
+
+        running = [item for item in jobs if item.get("state") not in TERMINAL_STATES]
         if running:
             raise RuntimeError("one experiment job is already queued or running")
         job_id = uuid.uuid4().hex
@@ -277,7 +337,8 @@ class ExperimentOperations:
             "commit_sha": self.settings.target_commit,
             "manifest_sha256": manifest_sha256,
             "requested_at": now,
-            "operational_compute_limits": dict(OPERATIONAL_LIMITS[task]),
+            "operational_compute_limits": limits,
+            "retry_of": retry_of,
         }
         status = {
             **request,
@@ -298,8 +359,9 @@ class ExperimentOperations:
             "repository": self.repository,
             "commit_sha": self.settings.target_commit,
             "manifest_sha256": manifest_sha256,
-            "operational_compute_limits": dict(OPERATIONAL_LIMITS[task]),
+            "operational_compute_limits": limits,
             "artifact_root": job_id,
+            "retry_of": retry_of,
             "belief_status": "not_committed",
         }
 
@@ -328,13 +390,7 @@ class ExperimentOperations:
                 raise FileNotFoundError("experiment job does not exist")
             status = _read_json(path)
             return {"status": "completed", "job": status, "belief_status": "not_committed"}
-        jobs: list[dict[str, Any]] = []
-        for path in sorted((self.control / "status").glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True)[:20]:
-            try:
-                jobs.append(_read_json(path))
-            except (OSError, ValueError, json.JSONDecodeError):
-                continue
-        return {"status": "completed", "jobs": jobs, "belief_status": "not_committed"}
+        return {"status": "completed", "jobs": self._job_records(20), "belief_status": "not_committed"}
 
     def stop(self, job_id: str) -> dict[str, Any]:
         current = self.status(job_id)["job"]

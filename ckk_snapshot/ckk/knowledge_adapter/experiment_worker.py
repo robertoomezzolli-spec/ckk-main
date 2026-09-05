@@ -111,7 +111,7 @@ def _limits(limits: dict[str, int]):
 def _validate_request(request: dict[str, Any], manifest: dict[str, Any], manifest_sha256: str) -> None:
     expected = {
         "schema_version", "job_id", "task", "repository", "branch", "commit_sha",
-        "manifest_sha256", "requested_at", "operational_compute_limits",
+        "manifest_sha256", "requested_at", "operational_compute_limits", "retry_of",
     }
     if set(request) != expected or request.get("schema_version") != 1:
         raise ValueError("invalid experiment job request")
@@ -125,6 +125,8 @@ def _validate_request(request: dict[str, Any], manifest: dict[str, Any], manifes
         raise ValueError("job request manifest hash mismatch")
     if not SHA.fullmatch(str(request.get("commit_sha", ""))):
         raise ValueError("job request has no full commit SHA")
+    if request.get("retry_of") is not None and not JOB_ID.fullmatch(str(request["retry_of"])):
+        raise ValueError("job request has invalid retry provenance")
     if request.get("operational_compute_limits") != OPERATIONAL_LIMITS[request["task"]]:
         raise ValueError("job request changed the fixed operational compute limits")
 

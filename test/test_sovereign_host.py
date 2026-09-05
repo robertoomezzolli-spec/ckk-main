@@ -11,10 +11,30 @@ from fastapi.testclient import TestClient
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ckk_snapshot"))
 
-from ckk.sovereign.host import HostSettings, create_app  # noqa: E402
+from ckk.sovereign.host import HostSettings, create_app, experiment_completion_observation  # noqa: E402
 
 
 class SovereignHostTests(unittest.TestCase):
+    def test_terminal_experiment_status_becomes_bounded_reply_channel_observation(self):
+        observation = experiment_completion_observation({
+            "job_id": "a" * 32,
+            "task": "fresh_seed_closure_plateau_v2",
+            "state": "COMPLETED",
+            "commit_sha": "b" * 40,
+            "manifest_sha256": "c" * 64,
+            "exit_code": 0,
+            "termination_class": "NORMAL_EXIT",
+            "runtime_seconds": 42.5,
+            "peak_rss_bytes": 1234,
+            "result_path": f"{'a' * 32}/result.json",
+            "result_sha256": "d" * 64,
+            "equivalence_passed": None,
+        }, "491701234567")
+        self.assertEqual(observation.sensor, "whatsapp:491701234567")
+        self.assertEqual(observation.kind, "message.experiment_status")
+        self.assertNotIn("recipient", observation.payload)
+        self.assertFalse(observation.payload["content_exported"])
+
     def test_meta_get_verification_and_signed_post_routes(self):
         with tempfile.TemporaryDirectory() as directory:
             settings = HostSettings(

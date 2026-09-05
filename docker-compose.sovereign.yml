@@ -78,6 +78,7 @@ services:
     read_only: true
     network_mode: none
     mem_limit: 1152m
+    memswap_limit: 5g
     cpus: "0.80"
     pids_limit: 64
     security_opt:
