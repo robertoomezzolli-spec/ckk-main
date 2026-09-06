@@ -1,0 +1,546 @@
+{
+  "additional_factor_states": 462,
+  "assumptions": [
+    "Associative commutative non-idempotent factor composition.",
+    "Factor-class duality toggles all copies in a class defined without dual.",
+    "No new recurrence orders, dimension limit in the algebra, or recurrence reduction.",
+    "Factor count is a runner budget only; saturation is relative to it."
+  ],
+  "baseline": {
+    "events": 100,
+    "factor_bound": 4,
+    "factor_states": 32,
+    "mode": "legacy-compatible",
+    "termination": "BOUNDED_SATURATION",
+    "validation": {
+      "clean": true,
+      "replayed_events": 100,
+      "seed_rooted_nodes": 36
+    }
+  },
+  "baseline_contained": true,
+  "extension": {
+    "events": 3588,
+    "factor_bound": 4,
+    "factor_states": 494,
+    "mode": "heterogeneous",
+    "termination": "BOUNDED_SATURATION",
+    "validation": {
+      "clean": true,
+      "replayed_events": 3588,
+      "seed_rooted_nodes": 498
+    }
+  },
+  "fixed_point_meaning": "Exact equality under the explicitly chosen factor-multiset equivalence only; no external interpretation or legacy dual=2 state.",
+  "global_dual_fixed_states": 14,
+  "scope": "Reduced recurrence/close/product/dual subsystem, not the full 11-operator fan.",
+  "verdict": "STRUCTURAL_EXTENSION_ONLY",
+  "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991",
+  "witnesses": [
+    {
+      "target": "90946512434e22ccdb353c93c33f9e444d0aa290e4842436259d14393a5d26af",
+      "trace": {
+        "admitted": [
+          "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+          "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+          "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+          "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+        ],
+        "events": [
+          {
+            "id": "e29cf1609efb9b488b6d6461bba9f32feb8a2fee7435602f38ef81129f0487df",
+            "inputs": [
+              "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "parameters": {},
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          },
+          {
+            "id": "4a7bb94b9eaeb48724e99d8e7cb8b7db00ef67ccadd4c09ad793d418a048fc77",
+            "inputs": [
+              "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d",
+            "parameters": {},
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          },
+          {
+            "id": "8ae4265fcaafc3e12ec40b6d6fc9a27a209b0cbebb3d2b8891c6366454149a8d",
+            "inputs": [
+              "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+              "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d"
+            ],
+            "level": 2,
+            "operator": "compose",
+            "output": "90946512434e22ccdb353c93c33f9e444d0aa290e4842436259d14393a5d26af",
+            "parameters": {},
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+            "value": {
+              "order": 0,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+            "value": {
+              "order": 2,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+            "value": {
+              "order": 3,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb",
+            "value": {
+              "order": 4,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "90946512434e22ccdb353c93c33f9e444d0aa290e4842436259d14393a5d26af",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          }
+        ],
+        "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+      }
+    },
+    {
+      "target": "ab552a1144410514d09e30835e3e43a68593683d49e7d93fe3c4083f5acb0c3f",
+      "trace": {
+        "admitted": [
+          "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+          "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+          "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+          "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+        ],
+        "events": [
+          {
+            "id": "e29cf1609efb9b488b6d6461bba9f32feb8a2fee7435602f38ef81129f0487df",
+            "inputs": [
+              "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "parameters": {},
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          },
+          {
+            "id": "4a7bb94b9eaeb48724e99d8e7cb8b7db00ef67ccadd4c09ad793d418a048fc77",
+            "inputs": [
+              "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d",
+            "parameters": {},
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          },
+          {
+            "id": "8ae4265fcaafc3e12ec40b6d6fc9a27a209b0cbebb3d2b8891c6366454149a8d",
+            "inputs": [
+              "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+              "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d"
+            ],
+            "level": 2,
+            "operator": "compose",
+            "output": "90946512434e22ccdb353c93c33f9e444d0aa290e4842436259d14393a5d26af",
+            "parameters": {},
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          },
+          {
+            "id": "5a8e5a9e7ff9eee48f54c81a7666febfd7db5c0235f44aa59afc7a49d4acbe7a",
+            "inputs": [
+              "90946512434e22ccdb353c93c33f9e444d0aa290e4842436259d14393a5d26af"
+            ],
+            "level": 3,
+            "operator": "dual_component",
+            "output": "ab552a1144410514d09e30835e3e43a68593683d49e7d93fe3c4083f5acb0c3f",
+            "parameters": {
+              "class": {
+                "anti": null,
+                "bc": null,
+                "dim": 1,
+                "kind": "CYCLE",
+                "mult": 1,
+                "occ": null,
+                "order": 2,
+                "sq": null,
+                "sym": null
+              }
+            },
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+            "value": {
+              "order": 0,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+            "value": {
+              "order": 2,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+            "value": {
+              "order": 3,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb",
+            "value": {
+              "order": 4,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "90946512434e22ccdb353c93c33f9e444d0aa290e4842436259d14393a5d26af",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "ab552a1144410514d09e30835e3e43a68593683d49e7d93fe3c4083f5acb0c3f",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          }
+        ],
+        "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+      }
+    },
+    {
+      "target": "af0affd637f8a265e76ab151541d7bcd2f59860d34db2ab71b5c47c2e3017fc0",
+      "trace": {
+        "admitted": [
+          "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+          "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+          "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+          "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+        ],
+        "events": [
+          {
+            "id": "4a7bb94b9eaeb48724e99d8e7cb8b7db00ef67ccadd4c09ad793d418a048fc77",
+            "inputs": [
+              "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d",
+            "parameters": {},
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          },
+          {
+            "id": "1ecdd4387e07dd2a895607f565dc4e3f8353f60d06e60b857f97179b3c7314be",
+            "inputs": [
+              "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d"
+            ],
+            "level": 2,
+            "operator": "dual_all",
+            "output": "274c50150755d29258c4d3b9a208bd6d9f1412864331a88eaf6f9b74b08906ea",
+            "parameters": {},
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          },
+          {
+            "id": "d9c587fcb5403de4df5992fc7363802834c82b4559dfa07c242545fc5c3d40db",
+            "inputs": [
+              "274c50150755d29258c4d3b9a208bd6d9f1412864331a88eaf6f9b74b08906ea",
+              "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d"
+            ],
+            "level": 3,
+            "operator": "compose",
+            "output": "af0affd637f8a265e76ab151541d7bcd2f59860d34db2ab71b5c47c2e3017fc0",
+            "parameters": {},
+            "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+            "value": {
+              "order": 0,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+            "value": {
+              "order": 2,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+            "value": {
+              "order": 3,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb",
+            "value": {
+              "order": 4,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "274c50150755d29258c4d3b9a208bd6d9f1412864331a88eaf6f9b74b08906ea",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "af0affd637f8a265e76ab151541d7bcd2f59860d34db2ab71b5c47c2e3017fc0",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          }
+        ],
+        "version": "factor-v1-70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991"
+      }
+    }
+  ]
+}
