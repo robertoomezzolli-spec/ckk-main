@@ -1,0 +1,63 @@
+{
+  "source_repository": "robertoomezzolli-spec/ckk-main",
+  "source_commit": "645639d8951ef3ad842f890adfc4005daca3412c",
+  "scope": "Archived fixture readiness, not current kernel parameter values. No domain evaluation was executed.",
+  "domains": [
+    {
+      "data": {
+        "archive_status": "FOUND_EXACT",
+        "blocking_reasons": [
+          "MISSING_FROZEN_EXPECTED_OUTPUT",
+          "MISSING_INDEPENDENT_HOLDOUT_FIXTURE"
+        ],
+        "certifiable": false,
+        "domain": "physics",
+        "duality": {
+          "selfduality": "NOT_EVALUATED",
+          "structural_roundtrip": "TEST_REQUIRED"
+        },
+        "maxdim": {
+          "not_a_claim": "4D spacetime discovery",
+          "role": "EXPERIMENT_PARAMETER",
+          "value": 4
+        },
+        "seed_provenance": "current audited core built-in SEEDS"
+      },
+      "path": "crossdomain/physics/metadata.json"
+    },
+    {
+      "data": {
+        "archive_status": "FOUND_PARTIAL",
+        "certifiable": false,
+        "domain": "chemistry",
+        "forbidden_claim": "A structural or chemical match from the narrative record alone",
+        "provenance_document": "provenance/SEALED_EXCLUSION.md",
+        "provenance_sha256": "5f0f5a53409fefb12ac6f2783156dd23a63d8a4cd506d4812cafc15db59d7a29"
+      },
+      "path": "crossdomain/chemistry/metadata.json"
+    },
+    {
+      "data": {
+        "archive_status": "FOUND_PARTIAL",
+        "certifiable": false,
+        "domain": "biology",
+        "forbidden_claim": "A biological match from the narrative record alone",
+        "provenance_document": "provenance/SEALED_ZN.md",
+        "provenance_sha256": "af7f0edc5c67a70d30bc59a668bafe8aed8ce52361854aaf9055b85e512789df"
+      },
+      "path": "crossdomain/biology/metadata.json"
+    },
+    {
+      "data": {
+        "archive_status": "FOUND_PARTIAL",
+        "certifiable": false,
+        "domain": "computation",
+        "forbidden_claim": "A computation-domain match or self-duality result from the narrative record alone",
+        "provenance_document": "provenance/SEALED_DUALITY.md",
+        "provenance_sha256": "92ef55a8d80d6e0fd1c5c650eeee0cefc5b0735a006f3f39c59e9cad5e300849",
+        "selfduality": "NOT_EVALUATED"
+      },
+      "path": "crossdomain/computation/metadata.json"
+    }
+  ]
+}

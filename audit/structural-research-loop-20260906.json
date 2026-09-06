@@ -1,0 +1,1769 @@
+{
+  "checkpoint_hash": "b71da9efe2f6e89a8caba5e530447bcf910cdb07268cb427900c9cdedabb42c5",
+  "completion": "COMPUTE_LIMIT_REACHED",
+  "external_evaluation": {
+    "reason": "No executable independent domain fixture is configured for this experimental dialect.",
+    "status": "NOT_RUN"
+  },
+  "grammar_mutations": 0,
+  "iterations": [
+    {
+      "baseline": {
+        "blocked_applications": {
+          "legacy_projection": 132
+        },
+        "events": 100,
+        "kinds": {
+          "BOUNDARY": 16,
+          "FACTORS": 16,
+          "FIBER": 8,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 1,
+        "limits": {
+          "constructor_depth": 2,
+          "leaf_occurrences": 2,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "legacy-compatible",
+        "nodes": 44,
+        "scalar_projectable_nodes": 40,
+        "scalar_projection_classes": 40,
+        "termination": "BOUNDED_SATURATION",
+        "validation": {
+          "clean": true,
+          "replayed_events": 100,
+          "seed_rooted_nodes": 44
+        },
+        "zero_rank_relative_nodes": 8
+      },
+      "baseline_contained": true,
+      "fingerprint": {
+        "events": "43ffabbc675825375329e19d60d45f601af29ac40985cd2144834cbd9ba913b3",
+        "nodes": "2403490688eec78e36e3b200763214dbfc6a259050955a755f2a4935f1e3c96a"
+      },
+      "index": 1,
+      "missing_vs_previous_observed": 0,
+      "new_vs_previous_observed": 212,
+      "result": {
+        "blocked_applications": {},
+        "events": 924,
+        "kinds": {
+          "BOUNDARY": 100,
+          "FACTORS": 44,
+          "FIBER": 64,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 1,
+        "limits": {
+          "constructor_depth": 2,
+          "leaf_occurrences": 2,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "heterogeneous",
+        "nodes": 212,
+        "scalar_projectable_nodes": 40,
+        "scalar_projection_classes": 40,
+        "termination": "BOUNDED_SATURATION",
+        "validation": {
+          "clean": true,
+          "replayed_events": 924,
+          "seed_rooted_nodes": 212
+        },
+        "zero_rank_relative_nodes": 64
+      },
+      "sample_target": "00a5ef0d2e0f4baef56411143b3fb8cea1e9d76779a7460eec2254258eb187db",
+      "sample_trace": {
+        "admitted": [
+          "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+          "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+          "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+          "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+        ],
+        "events": [
+          {
+            "id": "42f220a86ab20c790d790ce815026e540dcf24c8bbaab09262fee98fbc49b64b",
+            "inputs": [
+              "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "dc056fc31ca8490efb7b0f3e6e281b537576323220f3f5d9fed85c9525688f5f",
+            "inputs": [
+              "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "fdbaaafff0dc1b2b708331966d5f08342d757027caf2cd5d361d8d61cca227e2",
+            "inputs": [
+              "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+              "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060"
+            ],
+            "level": 2,
+            "operator": "compose",
+            "output": "6a8f3205c27b0af43fa77bd76af02556d40ac163ccbc195946ec6ee61ed0f9e1",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "24896d3efb571d160861a864069ad21908f9bf22234a1d62212d445c5ea162b5",
+            "inputs": [
+              "6a8f3205c27b0af43fa77bd76af02556d40ac163ccbc195946ec6ee61ed0f9e1"
+            ],
+            "level": 3,
+            "operator": "dual_all",
+            "output": "00a5ef0d2e0f4baef56411143b3fb8cea1e9d76779a7460eec2254258eb187db",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+            "value": {
+              "order": 0,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+            "value": {
+              "order": 2,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+            "value": {
+              "order": 3,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb",
+            "value": {
+              "order": 4,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 4,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "6a8f3205c27b0af43fa77bd76af02556d40ac163ccbc195946ec6ee61ed0f9e1",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 4,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "00a5ef0d2e0f4baef56411143b3fb8cea1e9d76779a7460eec2254258eb187db",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 4,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          }
+        ],
+        "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+      },
+      "scope": [
+        2,
+        2
+      ],
+      "verdict": "STRUCTURAL_GROWTH"
+    },
+    {
+      "baseline": {
+        "blocked_applications": {
+          "legacy_projection": 492,
+          "representation_budget": 8
+        },
+        "events": 228,
+        "kinds": {
+          "BOUNDARY": 40,
+          "FACTORS": 24,
+          "FIBER": 32,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 2,
+        "limits": {
+          "constructor_depth": 3,
+          "leaf_occurrences": 3,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "legacy-compatible",
+        "nodes": 100,
+        "scalar_projectable_nodes": 96,
+        "scalar_projection_classes": 72,
+        "termination": "BOUNDED_SATURATION",
+        "validation": {
+          "clean": true,
+          "replayed_events": 228,
+          "seed_rooted_nodes": 100
+        },
+        "zero_rank_relative_nodes": 24
+      },
+      "baseline_contained": true,
+      "fingerprint": {
+        "events": "49bfa097e4cc7ad6794edf6d6f0c987f17606499fdc3fe1b8b0d6b7fa9df2eca",
+        "nodes": "62c1b4f13f10e34eba6df83688ff844ff5e10dd46899a571907fbc8c5fdd51cf"
+      },
+      "index": 2,
+      "missing_vs_previous_observed": 0,
+      "new_vs_previous_observed": 1904,
+      "result": {
+        "blocked_applications": {
+          "representation_budget": 512
+        },
+        "events": 12196,
+        "kinds": {
+          "BOUNDARY": 796,
+          "FACTORS": 164,
+          "FIBER": 1152,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 2,
+        "limits": {
+          "constructor_depth": 3,
+          "leaf_occurrences": 3,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "heterogeneous",
+        "nodes": 2116,
+        "scalar_projectable_nodes": 96,
+        "scalar_projection_classes": 72,
+        "termination": "BOUNDED_SATURATION",
+        "validation": {
+          "clean": true,
+          "replayed_events": 12196,
+          "seed_rooted_nodes": 2116
+        },
+        "zero_rank_relative_nodes": 864
+      },
+      "sample_target": "000be8c7ade6830c0961e01f19cef92a1bc2537d436509bf3dde0ee7c9ced066",
+      "sample_trace": {
+        "admitted": [
+          "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+          "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+          "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+          "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+        ],
+        "events": [
+          {
+            "id": "c492c24d2a88a0af89881bb04721f2780108661e468cd6b5575c813ae5db9cb8",
+            "inputs": [
+              "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "1422ca523aaa4b0347d197566b3cbb57b4a96787f634fb679b8a03703e6e586b",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "42f220a86ab20c790d790ce815026e540dcf24c8bbaab09262fee98fbc49b64b",
+            "inputs": [
+              "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "dc056fc31ca8490efb7b0f3e6e281b537576323220f3f5d9fed85c9525688f5f",
+            "inputs": [
+              "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "393de1fc1db629a40c704f0de6f0d882bfe17dae1e8e34ea2f76ec62da87cb19",
+            "inputs": [
+              "1422ca523aaa4b0347d197566b3cbb57b4a96787f634fb679b8a03703e6e586b",
+              "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4"
+            ],
+            "level": 2,
+            "operator": "compose",
+            "output": "942f68e7047211b463bb831a09117a35f5319c7a705ad3e990a62351759f2b65",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "6fe0009ccc5b9150e092de79066b6f9e7f89684fe18ab7bc0fdc577c153b3e32",
+            "inputs": [
+              "942f68e7047211b463bb831a09117a35f5319c7a705ad3e990a62351759f2b65"
+            ],
+            "level": 3,
+            "operator": "boundary",
+            "output": "983ec1297ba80066193b9b1d36ba45d492dabeb78e5a6e1649b8141016167a4d",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "c40edaee379a87bb4bd421f1650a04101790190a22d6a5833c7c56f40061f0fa",
+            "inputs": [
+              "983ec1297ba80066193b9b1d36ba45d492dabeb78e5a6e1649b8141016167a4d",
+              "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060"
+            ],
+            "level": 4,
+            "operator": "fiber",
+            "output": "7ca1c81d11713c5e583da147c98141b8f263035bd41250f19c9ef63e8636dbba",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "66a468e21d26699e80090a14a7a114ae67f4f23f6f99e5ba7bf2355e292bf592",
+            "inputs": [
+              "7ca1c81d11713c5e583da147c98141b8f263035bd41250f19c9ef63e8636dbba"
+            ],
+            "level": 5,
+            "operator": "dual_component",
+            "output": "000be8c7ade6830c0961e01f19cef92a1bc2537d436509bf3dde0ee7c9ced066",
+            "parameters": {
+              "class": {
+                "anti": null,
+                "bc": null,
+                "dim": 1,
+                "kind": "CYCLE",
+                "mult": 1,
+                "occ": null,
+                "order": 3,
+                "sq": null,
+                "sym": null
+              },
+              "path": [
+                "base",
+                "carrier"
+              ]
+            },
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+            "value": {
+              "order": 0,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+            "value": {
+              "order": 2,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+            "value": {
+              "order": 3,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb",
+            "value": {
+              "order": 4,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "1422ca523aaa4b0347d197566b3cbb57b4a96787f634fb679b8a03703e6e586b",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 0,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 4,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "942f68e7047211b463bb831a09117a35f5319c7a705ad3e990a62351759f2b65",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 0,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "983ec1297ba80066193b9b1d36ba45d492dabeb78e5a6e1649b8141016167a4d",
+            "value": {
+              "carrier": {
+                "factors": [
+                  {
+                    "anti": null,
+                    "bc": null,
+                    "dim": 1,
+                    "dual": 0,
+                    "kind": "CYCLE",
+                    "mult": 1,
+                    "occ": null,
+                    "order": 0,
+                    "sq": null,
+                    "sym": null
+                  },
+                  {
+                    "anti": null,
+                    "bc": null,
+                    "dim": 1,
+                    "dual": 0,
+                    "kind": "CYCLE",
+                    "mult": 1,
+                    "occ": null,
+                    "order": 3,
+                    "sq": null,
+                    "sym": null
+                  }
+                ],
+                "type": "FACTORS"
+              },
+              "rank": 1,
+              "type": "BOUNDARY"
+            }
+          },
+          {
+            "id": "7ca1c81d11713c5e583da147c98141b8f263035bd41250f19c9ef63e8636dbba",
+            "value": {
+              "base": {
+                "carrier": {
+                  "factors": [
+                    {
+                      "anti": null,
+                      "bc": null,
+                      "dim": 1,
+                      "dual": 0,
+                      "kind": "CYCLE",
+                      "mult": 1,
+                      "occ": null,
+                      "order": 0,
+                      "sq": null,
+                      "sym": null
+                    },
+                    {
+                      "anti": null,
+                      "bc": null,
+                      "dim": 1,
+                      "dual": 0,
+                      "kind": "CYCLE",
+                      "mult": 1,
+                      "occ": null,
+                      "order": 3,
+                      "sq": null,
+                      "sym": null
+                    }
+                  ],
+                  "type": "FACTORS"
+                },
+                "rank": 1,
+                "type": "BOUNDARY"
+              },
+              "fiber": {
+                "factors": [
+                  {
+                    "anti": null,
+                    "bc": null,
+                    "dim": 1,
+                    "dual": 0,
+                    "kind": "CYCLE",
+                    "mult": 1,
+                    "occ": null,
+                    "order": 4,
+                    "sq": null,
+                    "sym": null
+                  }
+                ],
+                "type": "FACTORS"
+              },
+              "type": "FIBER"
+            }
+          },
+          {
+            "id": "000be8c7ade6830c0961e01f19cef92a1bc2537d436509bf3dde0ee7c9ced066",
+            "value": {
+              "base": {
+                "carrier": {
+                  "factors": [
+                    {
+                      "anti": null,
+                      "bc": null,
+                      "dim": 1,
+                      "dual": 0,
+                      "kind": "CYCLE",
+                      "mult": 1,
+                      "occ": null,
+                      "order": 0,
+                      "sq": null,
+                      "sym": null
+                    },
+                    {
+                      "anti": null,
+                      "bc": null,
+                      "dim": 1,
+                      "dual": 1,
+                      "kind": "CYCLE",
+                      "mult": 1,
+                      "occ": null,
+                      "order": 3,
+                      "sq": null,
+                      "sym": null
+                    }
+                  ],
+                  "type": "FACTORS"
+                },
+                "rank": 1,
+                "type": "BOUNDARY"
+              },
+              "fiber": {
+                "factors": [
+                  {
+                    "anti": null,
+                    "bc": null,
+                    "dim": 1,
+                    "dual": 0,
+                    "kind": "CYCLE",
+                    "mult": 1,
+                    "occ": null,
+                    "order": 4,
+                    "sq": null,
+                    "sym": null
+                  }
+                ],
+                "type": "FACTORS"
+              },
+              "type": "FIBER"
+            }
+          }
+        ],
+        "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+      },
+      "scope": [
+        3,
+        3
+      ],
+      "verdict": "STRUCTURAL_GROWTH"
+    },
+    {
+      "baseline": {
+        "blocked_applications": {
+          "legacy_projection": 516
+        },
+        "events": 244,
+        "kinds": {
+          "BOUNDARY": 48,
+          "FACTORS": 24,
+          "FIBER": 32,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 3,
+        "limits": {
+          "constructor_depth": 4,
+          "leaf_occurrences": 3,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "legacy-compatible",
+        "nodes": 108,
+        "scalar_projectable_nodes": 104,
+        "scalar_projection_classes": 72,
+        "termination": "BOUNDED_SATURATION",
+        "validation": {
+          "clean": true,
+          "replayed_events": 244,
+          "seed_rooted_nodes": 108
+        },
+        "zero_rank_relative_nodes": 32
+      },
+      "baseline_contained": true,
+      "fingerprint": {
+        "events": "eb6570de191ad59d2d537768a9b9c2d6e1b46e3885b05be6dcb9feb2847f0e31",
+        "nodes": "9f772cbe1ccce91aae01e0680819a8568ed311a333fe1f20529fd0faf6edddc9"
+      },
+      "index": 3,
+      "missing_vs_previous_observed": 0,
+      "new_vs_previous_observed": 512,
+      "result": {
+        "blocked_applications": {},
+        "events": 14756,
+        "kinds": {
+          "BOUNDARY": 1308,
+          "FACTORS": 164,
+          "FIBER": 1152,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 3,
+        "limits": {
+          "constructor_depth": 4,
+          "leaf_occurrences": 3,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "heterogeneous",
+        "nodes": 2628,
+        "scalar_projectable_nodes": 104,
+        "scalar_projection_classes": 72,
+        "termination": "BOUNDED_SATURATION",
+        "validation": {
+          "clean": true,
+          "replayed_events": 14756,
+          "seed_rooted_nodes": 2628
+        },
+        "zero_rank_relative_nodes": 1376
+      },
+      "sample_target": "00927ef0d3d1775100eac83c8d302d9499a9829b4b727d5b61d6e0f077df28b5",
+      "sample_trace": {
+        "admitted": [
+          "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+          "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+          "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+          "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+        ],
+        "events": [
+          {
+            "id": "c492c24d2a88a0af89881bb04721f2780108661e468cd6b5575c813ae5db9cb8",
+            "inputs": [
+              "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "1422ca523aaa4b0347d197566b3cbb57b4a96787f634fb679b8a03703e6e586b",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "dc056fc31ca8490efb7b0f3e6e281b537576323220f3f5d9fed85c9525688f5f",
+            "inputs": [
+              "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "4a141e6b013de48a3eac24e02af688029cd5d103ba312399f56901ac272e3192",
+            "inputs": [
+              "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "89fded50146688d75b98d6407338cc57c7e8e39572c320510b222b2a9b3e0df1",
+            "inputs": [
+              "1422ca523aaa4b0347d197566b3cbb57b4a96787f634fb679b8a03703e6e586b",
+              "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060"
+            ],
+            "level": 2,
+            "operator": "fiber",
+            "output": "06f3083bb10d8bb64eba46563127bea62d893f20881173728fc3a8960135be12",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "5dd3f48ba07aa33dc9a62b899ecdf925814c70c9d6e2781af760dcea9f36709e",
+            "inputs": [
+              "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d"
+            ],
+            "level": 2,
+            "operator": "dual_all",
+            "output": "274c50150755d29258c4d3b9a208bd6d9f1412864331a88eaf6f9b74b08906ea",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "6cc6981fd99b77004c976fc0d8404482e23c4a8a09ff272e78711a9df6e8c447",
+            "inputs": [
+              "06f3083bb10d8bb64eba46563127bea62d893f20881173728fc3a8960135be12"
+            ],
+            "level": 3,
+            "operator": "boundary",
+            "output": "8c193ce727ed2f7ab4fa125f33a199eabcbdfdf5b659f0883c85362416cc39f7",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "a8775332fcbf9072a2f071c9a159666adaffa557d95e4637a5e78edaca6297f0",
+            "inputs": [
+              "8c193ce727ed2f7ab4fa125f33a199eabcbdfdf5b659f0883c85362416cc39f7",
+              "274c50150755d29258c4d3b9a208bd6d9f1412864331a88eaf6f9b74b08906ea"
+            ],
+            "level": 4,
+            "operator": "fiber",
+            "output": "b5401401d513712e60ca744b73094b9aaeeb1dfefdf3820c54c9d5bf0ee69104",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "c30f4e7e2a44bf08f08483609350de167af50627b7d86466271480184ad7e5de",
+            "inputs": [
+              "b5401401d513712e60ca744b73094b9aaeeb1dfefdf3820c54c9d5bf0ee69104"
+            ],
+            "level": 5,
+            "operator": "boundary",
+            "output": "00927ef0d3d1775100eac83c8d302d9499a9829b4b727d5b61d6e0f077df28b5",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+            "value": {
+              "order": 0,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+            "value": {
+              "order": 2,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+            "value": {
+              "order": 3,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb",
+            "value": {
+              "order": 4,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "1422ca523aaa4b0347d197566b3cbb57b4a96787f634fb679b8a03703e6e586b",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 0,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "c34fd2096b3ce69b0a103e5700cfd9a98a6734e1e79981c1d5f9e035318a7e5d",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 4,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "274c50150755d29258c4d3b9a208bd6d9f1412864331a88eaf6f9b74b08906ea",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 2,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "06f3083bb10d8bb64eba46563127bea62d893f20881173728fc3a8960135be12",
+            "value": {
+              "base": {
+                "factors": [
+                  {
+                    "anti": null,
+                    "bc": null,
+                    "dim": 1,
+                    "dual": 0,
+                    "kind": "CYCLE",
+                    "mult": 1,
+                    "occ": null,
+                    "order": 0,
+                    "sq": null,
+                    "sym": null
+                  }
+                ],
+                "type": "FACTORS"
+              },
+              "fiber": {
+                "factors": [
+                  {
+                    "anti": null,
+                    "bc": null,
+                    "dim": 1,
+                    "dual": 0,
+                    "kind": "CYCLE",
+                    "mult": 1,
+                    "occ": null,
+                    "order": 4,
+                    "sq": null,
+                    "sym": null
+                  }
+                ],
+                "type": "FACTORS"
+              },
+              "type": "FIBER"
+            }
+          },
+          {
+            "id": "8c193ce727ed2f7ab4fa125f33a199eabcbdfdf5b659f0883c85362416cc39f7",
+            "value": {
+              "carrier": {
+                "base": {
+                  "factors": [
+                    {
+                      "anti": null,
+                      "bc": null,
+                      "dim": 1,
+                      "dual": 0,
+                      "kind": "CYCLE",
+                      "mult": 1,
+                      "occ": null,
+                      "order": 0,
+                      "sq": null,
+                      "sym": null
+                    }
+                  ],
+                  "type": "FACTORS"
+                },
+                "fiber": {
+                  "factors": [
+                    {
+                      "anti": null,
+                      "bc": null,
+                      "dim": 1,
+                      "dual": 0,
+                      "kind": "CYCLE",
+                      "mult": 1,
+                      "occ": null,
+                      "order": 4,
+                      "sq": null,
+                      "sym": null
+                    }
+                  ],
+                  "type": "FACTORS"
+                },
+                "type": "FIBER"
+              },
+              "rank": 0,
+              "type": "BOUNDARY"
+            }
+          },
+          {
+            "id": "b5401401d513712e60ca744b73094b9aaeeb1dfefdf3820c54c9d5bf0ee69104",
+            "value": {
+              "base": {
+                "carrier": {
+                  "base": {
+                    "factors": [
+                      {
+                        "anti": null,
+                        "bc": null,
+                        "dim": 1,
+                        "dual": 0,
+                        "kind": "CYCLE",
+                        "mult": 1,
+                        "occ": null,
+                        "order": 0,
+                        "sq": null,
+                        "sym": null
+                      }
+                    ],
+                    "type": "FACTORS"
+                  },
+                  "fiber": {
+                    "factors": [
+                      {
+                        "anti": null,
+                        "bc": null,
+                        "dim": 1,
+                        "dual": 0,
+                        "kind": "CYCLE",
+                        "mult": 1,
+                        "occ": null,
+                        "order": 4,
+                        "sq": null,
+                        "sym": null
+                      }
+                    ],
+                    "type": "FACTORS"
+                  },
+                  "type": "FIBER"
+                },
+                "rank": 0,
+                "type": "BOUNDARY"
+              },
+              "fiber": {
+                "factors": [
+                  {
+                    "anti": null,
+                    "bc": null,
+                    "dim": 1,
+                    "dual": 1,
+                    "kind": "CYCLE",
+                    "mult": 1,
+                    "occ": null,
+                    "order": 2,
+                    "sq": null,
+                    "sym": null
+                  }
+                ],
+                "type": "FACTORS"
+              },
+              "type": "FIBER"
+            }
+          },
+          {
+            "id": "00927ef0d3d1775100eac83c8d302d9499a9829b4b727d5b61d6e0f077df28b5",
+            "value": {
+              "carrier": {
+                "base": {
+                  "carrier": {
+                    "base": {
+                      "factors": [
+                        {
+                          "anti": null,
+                          "bc": null,
+                          "dim": 1,
+                          "dual": 0,
+                          "kind": "CYCLE",
+                          "mult": 1,
+                          "occ": null,
+                          "order": 0,
+                          "sq": null,
+                          "sym": null
+                        }
+                      ],
+                      "type": "FACTORS"
+                    },
+                    "fiber": {
+                      "factors": [
+                        {
+                          "anti": null,
+                          "bc": null,
+                          "dim": 1,
+                          "dual": 0,
+                          "kind": "CYCLE",
+                          "mult": 1,
+                          "occ": null,
+                          "order": 4,
+                          "sq": null,
+                          "sym": null
+                        }
+                      ],
+                      "type": "FACTORS"
+                    },
+                    "type": "FIBER"
+                  },
+                  "rank": 0,
+                  "type": "BOUNDARY"
+                },
+                "fiber": {
+                  "factors": [
+                    {
+                      "anti": null,
+                      "bc": null,
+                      "dim": 1,
+                      "dual": 1,
+                      "kind": "CYCLE",
+                      "mult": 1,
+                      "occ": null,
+                      "order": 2,
+                      "sq": null,
+                      "sym": null
+                    }
+                  ],
+                  "type": "FACTORS"
+                },
+                "type": "FIBER"
+              },
+              "rank": 0,
+              "type": "BOUNDARY"
+            }
+          }
+        ],
+        "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+      },
+      "scope": [
+        3,
+        4
+      ],
+      "verdict": "STRUCTURAL_GROWTH"
+    },
+    {
+      "baseline": {
+        "blocked_applications": {
+          "legacy_projection": 516
+        },
+        "events": 244,
+        "kinds": {
+          "BOUNDARY": 48,
+          "FACTORS": 24,
+          "FIBER": 32,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 3,
+        "limits": {
+          "constructor_depth": 5,
+          "leaf_occurrences": 3,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "legacy-compatible",
+        "nodes": 108,
+        "scalar_projectable_nodes": 104,
+        "scalar_projection_classes": 72,
+        "termination": "BOUNDED_SATURATION",
+        "validation": {
+          "clean": true,
+          "replayed_events": 244,
+          "seed_rooted_nodes": 108
+        },
+        "zero_rank_relative_nodes": 32
+      },
+      "baseline_contained": true,
+      "fingerprint": {
+        "events": "eb6570de191ad59d2d537768a9b9c2d6e1b46e3885b05be6dcb9feb2847f0e31",
+        "nodes": "9f772cbe1ccce91aae01e0680819a8568ed311a333fe1f20529fd0faf6edddc9"
+      },
+      "index": 4,
+      "missing_vs_previous_observed": 0,
+      "new_vs_previous_observed": 0,
+      "result": {
+        "blocked_applications": {},
+        "events": 14756,
+        "kinds": {
+          "BOUNDARY": 1308,
+          "FACTORS": 164,
+          "FIBER": 1152,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 3,
+        "limits": {
+          "constructor_depth": 5,
+          "leaf_occurrences": 3,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "heterogeneous",
+        "nodes": 2628,
+        "scalar_projectable_nodes": 104,
+        "scalar_projection_classes": 72,
+        "termination": "BOUNDED_SATURATION",
+        "validation": {
+          "clean": true,
+          "replayed_events": 14756,
+          "seed_rooted_nodes": 2628
+        },
+        "zero_rank_relative_nodes": 1376
+      },
+      "sample_target": null,
+      "sample_trace": null,
+      "scope": [
+        3,
+        5
+      ],
+      "verdict": "NO_STATE_GROWTH_IN_THIS_SCOPE"
+    },
+    {
+      "baseline": {
+        "blocked_applications": {
+          "legacy_projection": 1152,
+          "representation_budget": 8
+        },
+        "events": 444,
+        "kinds": {
+          "BOUNDARY": 88,
+          "FACTORS": 32,
+          "FIBER": 72,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 5,
+        "limits": {
+          "constructor_depth": 5,
+          "leaf_occurrences": 4,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "legacy-compatible",
+        "nodes": 196,
+        "scalar_projectable_nodes": 192,
+        "scalar_projection_classes": 96,
+        "termination": "BOUNDED_SATURATION",
+        "validation": {
+          "clean": true,
+          "replayed_events": 444,
+          "seed_rooted_nodes": 196
+        },
+        "zero_rank_relative_nodes": 64
+      },
+      "baseline_contained": false,
+      "fingerprint": {
+        "events": "4ecd66d384f2ce046a92a4bf96423a00252b747581f7759374bd14549c4b99fa",
+        "nodes": "61355fe067cad79952d81e6880ce4c64a1714bbf80b4a29a0bb525969882b27d"
+      },
+      "index": 5,
+      "missing_vs_previous_observed": 592,
+      "new_vs_previous_observed": 2964,
+      "result": {
+        "blocked_applications": {},
+        "events": 15081,
+        "kinds": {
+          "BOUNDARY": 1526,
+          "FACTORS": 494,
+          "FIBER": 2976,
+          "RECURRENCE": 4
+        },
+        "largest_projection_class": 3,
+        "limits": {
+          "constructor_depth": 5,
+          "leaf_occurrences": 4,
+          "levels": 16,
+          "max_events": 50000,
+          "max_nodes": 5000,
+          "seconds": 20
+        },
+        "mode": "heterogeneous",
+        "nodes": 5000,
+        "scalar_projectable_nodes": 130,
+        "scalar_projection_classes": 96,
+        "termination": "NODE_BUDGET",
+        "validation": {
+          "clean": true,
+          "replayed_events": 15081,
+          "seed_rooted_nodes": 5000
+        },
+        "zero_rank_relative_nodes": 784
+      },
+      "sample_target": "001c1dfcbd9219b81d7e4ac7e3363e78ce5ccf0bcd4c039c45363c2a675352c1",
+      "sample_trace": {
+        "admitted": [
+          "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+          "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+          "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+          "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+        ],
+        "events": [
+          {
+            "id": "42f220a86ab20c790d790ce815026e540dcf24c8bbaab09262fee98fbc49b64b",
+            "inputs": [
+              "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "dc056fc31ca8490efb7b0f3e6e281b537576323220f3f5d9fed85c9525688f5f",
+            "inputs": [
+              "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "c492c24d2a88a0af89881bb04721f2780108661e468cd6b5575c813ae5db9cb8",
+            "inputs": [
+              "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8"
+            ],
+            "level": 1,
+            "operator": "close",
+            "output": "1422ca523aaa4b0347d197566b3cbb57b4a96787f634fb679b8a03703e6e586b",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "fdbaaafff0dc1b2b708331966d5f08342d757027caf2cd5d361d8d61cca227e2",
+            "inputs": [
+              "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+              "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060"
+            ],
+            "level": 2,
+            "operator": "compose",
+            "output": "6a8f3205c27b0af43fa77bd76af02556d40ac163ccbc195946ec6ee61ed0f9e1",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "393de1fc1db629a40c704f0de6f0d882bfe17dae1e8e34ea2f76ec62da87cb19",
+            "inputs": [
+              "1422ca523aaa4b0347d197566b3cbb57b4a96787f634fb679b8a03703e6e586b",
+              "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4"
+            ],
+            "level": 2,
+            "operator": "compose",
+            "output": "942f68e7047211b463bb831a09117a35f5319c7a705ad3e990a62351759f2b65",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "d80495f973cb9e0f399b64e63578f084adae3abfc6358bc9884c502321750a5d",
+            "inputs": [
+              "942f68e7047211b463bb831a09117a35f5319c7a705ad3e990a62351759f2b65"
+            ],
+            "level": 3,
+            "operator": "dual_all",
+            "output": "b0fb8e08a81462f736eda63a8c5f08fe55aaec6644b74d4edc77670f3cb3e77b",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          },
+          {
+            "id": "6a133bb9eaf256a55b97713b8719f3796225bf64ddbce748dcaecfba9ebcd7c2",
+            "inputs": [
+              "6a8f3205c27b0af43fa77bd76af02556d40ac163ccbc195946ec6ee61ed0f9e1",
+              "b0fb8e08a81462f736eda63a8c5f08fe55aaec6644b74d4edc77670f3cb3e77b"
+            ],
+            "level": 4,
+            "operator": "compose",
+            "output": "001c1dfcbd9219b81d7e4ac7e3363e78ce5ccf0bcd4c039c45363c2a675352c1",
+            "parameters": {},
+            "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "bd17f24a22e00fc6bc13f705c28ad2749e86395b34a8b790e3c25bb30142a6f8",
+            "value": {
+              "order": 0,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "64f7a8da0b57aaadf461ae28a609a803b9f7cd0f3796b18a3ea05f60f6cc2a3a",
+            "value": {
+              "order": 2,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6d8027cbae1acef414ed1d6959a018c2db55a3d6cd24c15a22e0e526e4de41ac",
+            "value": {
+              "order": 3,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "6b8432bc944da7dc3724a7cf7d07a1194f50b481a511583154d14de3a74d68fb",
+            "value": {
+              "order": 4,
+              "type": "RECURRENCE"
+            }
+          },
+          {
+            "id": "1422ca523aaa4b0347d197566b3cbb57b4a96787f634fb679b8a03703e6e586b",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 0,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "1efddfb275dda7f9f95e9ad1aa6592332ab2cfceb77a143b31bf8f5d4f996af4",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "417e623ff101b7071aaa6b638ac50054bc3406a7d1fd1391f448c84e9da15060",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 4,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "942f68e7047211b463bb831a09117a35f5319c7a705ad3e990a62351759f2b65",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 0,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "6a8f3205c27b0af43fa77bd76af02556d40ac163ccbc195946ec6ee61ed0f9e1",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 4,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "b0fb8e08a81462f736eda63a8c5f08fe55aaec6644b74d4edc77670f3cb3e77b",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 0,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          },
+          {
+            "id": "001c1dfcbd9219b81d7e4ac7e3363e78ce5ccf0bcd4c039c45363c2a675352c1",
+            "value": {
+              "factors": [
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 0,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 4,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 0,
+                  "sq": null,
+                  "sym": null
+                },
+                {
+                  "anti": null,
+                  "bc": null,
+                  "dim": 1,
+                  "dual": 1,
+                  "kind": "CYCLE",
+                  "mult": 1,
+                  "occ": null,
+                  "order": 3,
+                  "sq": null,
+                  "sym": null
+                }
+              ],
+              "type": "FACTORS"
+            }
+          }
+        ],
+        "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+      },
+      "scope": [
+        4,
+        5
+      ],
+      "verdict": "COMPUTE_LIMIT_REACHED"
+    }
+  ],
+  "nature_coverage": "NOT_DEFINED",
+  "next_gate": "Independent external fixtures and interpretation bridge; complete remaining legacy-operator adapters separately.",
+  "protocol": {
+    "max_events": 50000,
+    "max_nodes": 5000,
+    "schedule": [
+      [
+        2,
+        2
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        4,
+        5
+      ]
+    ],
+    "seconds": 20,
+    "sources": {
+      "ckk_snapshot/ckk/gen/boundary_kernel.py": "90e4819da947e3c9d9973c53d49459d89ce8397a8afa186bb068de478dbd730e",
+      "ckk_snapshot/ckk/gen/factor_kernel.py": "70da7f3799304aace162ed270ab2c0560fe9ddf89b78c98a0a9b4774df59b991",
+      "scripts/boundary-expansion.py": "930bdc9b3417a4517ac7325e4bc3d3c561e863133133149615d1734ef04d4d39",
+      "scripts/structural-research-loop.py": "36383d291fac81470b1e9e1d1537e2c04537c2945fbefc6589d724d0f9cd357b"
+    },
+    "version": "boundary-v1-e537db312fec36cdde2810ebf06738402e6aa3a70e4034566fc0aaacaa95c864"
+  },
+  "protocol_hash": "4b3c5ed966d05293af69b11e60c1b8b63293c00d704d017caaed5e0066e10011"
+}
