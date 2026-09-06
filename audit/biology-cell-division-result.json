@@ -1,0 +1,275 @@
+{
+  "probe_id": "biology-cell-division-20260906",
+  "probe_sha256": "2116efa43a090653303a47e186592af2bf5d3b0b1cbec75d8d0b84de3e0ae8d6",
+  "grammar_hash": "afd52bc69b014d418826c400d2eb5e159ca41fb3e60fee68f8da90dcf18e89da",
+  "experiment": {
+    "maxdim": null,
+    "levels": 5,
+    "cap": 20000
+  },
+  "counts": {
+    "structures": 1403,
+    "events": 4491
+  },
+  "validation": {
+    "clean": true,
+    "errors": [],
+    "counts": {
+      "structures": 1403,
+      "admitted": 10,
+      "generable": 1393,
+      "derivation_events": 4491,
+      "true_derivational_confluences": 1084
+    },
+    "integrity": {
+      "duplicate_structure_ids": 0,
+      "duplicate_structural_hashes": 0,
+      "dangling_derivation_inputs": 0,
+      "dangling_derivation_outputs": 0,
+      "idempotent_self_transitions": 0,
+      "cross_order_fiber_violations": 0,
+      "mixed_dual_product_violations": 0,
+      "mixed_dual_fiber_violations": 0,
+      "invalid_derivation_steps": 0,
+      "replayed_derivation_events": 4491,
+      "unreachable_generated_structures": 0,
+      "unverified_selfduality_claims": 0
+    }
+  },
+  "projections": [
+    {
+      "name": "recurring process",
+      "signature": {
+        "kind": "CYCLE",
+        "dim": 1,
+        "order": 0,
+        "sym": null,
+        "sq": null,
+        "anti": null,
+        "mult": 1,
+        "bc": null,
+        "dual": 0,
+        "occ": null
+      },
+      "matches": [
+        {
+          "id": "str_0a4acef7b0ace802d391182d",
+          "trace": {
+            "nodes": [
+              {
+                "id": "str_0a4acef7b0ace802d391182d",
+                "lifecycle": "GENERABLE",
+                "signature": {
+                  "kind": "CYCLE",
+                  "dim": 1,
+                  "order": 0,
+                  "sym": null,
+                  "sq": null,
+                  "anti": null,
+                  "mult": 1,
+                  "bc": null,
+                  "dual": 0,
+                  "occ": null
+                }
+              },
+              {
+                "id": "str_338a335ef2a8d22e06081ec6",
+                "lifecycle": "ADMITTED",
+                "signature": {
+                  "kind": "RECURRENCE",
+                  "dim": 0,
+                  "order": 0,
+                  "sym": null,
+                  "sq": null,
+                  "anti": null,
+                  "mult": 1,
+                  "bc": null,
+                  "dual": 0,
+                  "occ": null
+                }
+              }
+            ],
+            "events": [
+              {
+                "generation_id": "biology-cell-division-20260906",
+                "operator": "op_close",
+                "operator_version": "ckk-grammar-afd52bc69b01",
+                "inputs": [
+                  "str_338a335ef2a8d22e06081ec6"
+                ],
+                "output": "str_0a4acef7b0ace802d391182d",
+                "parameters": {
+                  "arity": 1
+                },
+                "level": 1,
+                "input_structural_hashes": [
+                  "4ef791a369940f6390862064dfdcbc6c24c760e63d649ca4d7ac8b9dfe9cabbd"
+                ],
+                "output_structural_hash": "08434f90e7ecb8a52004c14998e14e7a0b8548c82448e9014776c6b162e0fdbf",
+                "event_hash": "398c1cfda25cb57ce6f2070687d51be838764ba2f102f033319af701748ad1d0",
+                "id": "dev_bc7605618ddb1a55cb0ab4ce"
+              }
+            ],
+            "status": "SEED_ROOTED_STRUCTURAL_TRACE_ONLY"
+          }
+        }
+      ],
+      "control_same_signature": true
+    },
+    {
+      "name": "recurring process with multiplicity two, no symmetry assumption",
+      "signature": {
+        "kind": "CYCLE",
+        "dim": 1,
+        "order": 0,
+        "sym": null,
+        "sq": null,
+        "anti": null,
+        "mult": 2,
+        "bc": null,
+        "dual": 0,
+        "occ": null
+      },
+      "matches": [],
+      "control_same_signature": true
+    }
+  ],
+  "relaxed_multiplicity_query": {
+    "query": {
+      "kind": "CYCLE",
+      "dim": 1,
+      "order": 0,
+      "mult": 2,
+      "dual": 0,
+      "occ": null
+    },
+    "warning": "Partial query ignores symmetry; it is not an exact biological match.",
+    "matches": [
+      {
+        "id": "str_8467e98c48ad0760fb6f6c10",
+        "trace": {
+          "nodes": [
+            {
+              "id": "str_8467e98c48ad0760fb6f6c10",
+              "lifecycle": "GENERABLE",
+              "signature": {
+                "kind": "CYCLE",
+                "dim": 1,
+                "order": 0,
+                "sym": "S-a",
+                "sq": null,
+                "anti": null,
+                "mult": 2,
+                "bc": null,
+                "dual": 0,
+                "occ": null
+              }
+            },
+            {
+              "id": "str_0a4acef7b0ace802d391182d",
+              "lifecycle": "GENERABLE",
+              "signature": {
+                "kind": "CYCLE",
+                "dim": 1,
+                "order": 0,
+                "sym": null,
+                "sq": null,
+                "anti": null,
+                "mult": 1,
+                "bc": null,
+                "dual": 0,
+                "occ": null
+              }
+            },
+            {
+              "id": "str_338a335ef2a8d22e06081ec6",
+              "lifecycle": "ADMITTED",
+              "signature": {
+                "kind": "RECURRENCE",
+                "dim": 0,
+                "order": 0,
+                "sym": null,
+                "sq": null,
+                "anti": null,
+                "mult": 1,
+                "bc": null,
+                "dual": 0,
+                "occ": null
+              }
+            },
+            {
+              "id": "str_5b6463d3eabf488e190ca133",
+              "lifecycle": "ADMITTED",
+              "signature": {
+                "kind": "SYMMETRY",
+                "dim": 0,
+                "order": 0,
+                "sym": null,
+                "sq": -1,
+                "anti": true,
+                "mult": 1,
+                "bc": null,
+                "dual": 0,
+                "occ": null
+              }
+            }
+          ],
+          "events": [
+            {
+              "generation_id": "biology-cell-division-20260906",
+              "operator": "op_close",
+              "operator_version": "ckk-grammar-afd52bc69b01",
+              "inputs": [
+                "str_338a335ef2a8d22e06081ec6"
+              ],
+              "output": "str_0a4acef7b0ace802d391182d",
+              "parameters": {
+                "arity": 1
+              },
+              "level": 1,
+              "input_structural_hashes": [
+                "4ef791a369940f6390862064dfdcbc6c24c760e63d649ca4d7ac8b9dfe9cabbd"
+              ],
+              "output_structural_hash": "08434f90e7ecb8a52004c14998e14e7a0b8548c82448e9014776c6b162e0fdbf",
+              "event_hash": "398c1cfda25cb57ce6f2070687d51be838764ba2f102f033319af701748ad1d0",
+              "id": "dev_bc7605618ddb1a55cb0ab4ce"
+            },
+            {
+              "generation_id": "biology-cell-division-20260906",
+              "operator": "op_degenerate",
+              "operator_version": "ckk-grammar-afd52bc69b01",
+              "inputs": [
+                "str_0a4acef7b0ace802d391182d",
+                "str_5b6463d3eabf488e190ca133"
+              ],
+              "output": "str_8467e98c48ad0760fb6f6c10",
+              "parameters": {
+                "arity": 2
+              },
+              "level": 2,
+              "input_structural_hashes": [
+                "08434f90e7ecb8a52004c14998e14e7a0b8548c82448e9014776c6b162e0fdbf",
+                "7a59b47d3d1ebbb4b8330f5de46ed62ae3397bdb92c10edd266431580895d818"
+              ],
+              "output_structural_hash": "02bfbac37f1078054667ace97899d8ec1f34cf1463c4279da1f0a66dccf39cae",
+              "event_hash": "77bfa8d888a36ce85daa3a7d820ae248e3251309ba02bbac3aad59fba14833e2",
+              "id": "dev_3c392ad4affa1b2eb6e1ab71"
+            }
+          ],
+          "status": "SEED_ROOTED_STRUCTURAL_TRACE_ONLY"
+        }
+      }
+    ]
+  },
+  "full_claim_normalization_error": "Unsupported structural fields: genetic_information, phase_order, daughter_cells",
+  "biology_direct": false,
+  "verdict": "BIOLOGICAL_MECHANISM_NOT_ESTABLISHED",
+  "limitations": [
+    "Manual projections are hypotheses, not independent adjudicated normalizations.",
+    "Multiplicity is not a daughter-cell count without a justified semantic bridge.",
+    "op_degenerate explicitly assigns multiplicity two for its anti/sq=-1 seed.",
+    "Schema rejection concerns this serialization; it does not prove biology cannot emerge from relations.",
+    "No reconstruction of genetic copying, inheritance or cell partition was implemented or demonstrated.",
+    "No database writes, production interpretations, external LLM calls or native DIRECT verdict."
+  ]
+}

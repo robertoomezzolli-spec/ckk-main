@@ -1,0 +1,21 @@
+{
+  "id": "biology-cell-division-20260906",
+  "domain": "BIOLOGY",
+  "name": "Mitotic cell division",
+  "source": "https://www.ncbi.nlm.nih.gov/books/NBK26869/",
+  "external_requirements": ["DNA replication before segregation", "inheritance of copied genetic information", "partition into two daughter cells", "coordination of replication and division"],
+  "method": "Manual external candidate and deliberately coarse projections; no independent normalizer adjudication, no biological kernel seeds, no discovery claim.",
+  "projections": [
+    {"name": "recurring process", "claim": {"kind": "CYCLE", "dim": 1}},
+    {"name": "recurring process with multiplicity two, no symmetry assumption", "claim": {"kind": "CYCLE", "dim": 1, "mult": 2}}
+  ],
+  "relaxed_query": {"kind": "CYCLE", "dim": 1, "order": 0, "mult": 2, "dual": 0, "occ": null},
+  "negative_control": {
+    "name": "Invented machine that periodically copies a file to two output slots",
+    "biological": false,
+    "projections": [
+      {"kind": "CYCLE", "dim": 1},
+      {"kind": "CYCLE", "dim": 1, "mult": 2}
+    ]
+  }
+}
