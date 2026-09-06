@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse
 from .evaluator import PassiveEvaluator
 from .metrics import METRIC_BY_CODE
 from .probes import HarmlessSandboxSubject, PROBE_CLASSES, ProbeGenerator, ProbeRunner
+from .sleep_view import SLEEP_EVENT_TYPES, build_sleep_report, sleep_dashboard_html, window_start
 from .store import EvidenceEvent, ObservatoryStore
 
 
@@ -99,6 +100,18 @@ class ObservatoryService:
             }
         )
         return scores
+
+    def sleep_report(self, subject_id: str, window: str, limit: int) -> dict[str, Any]:
+        events = self.store.event_stream(
+            SLEEP_EVENT_TYPES,
+            subject_id=subject_id,
+            since=window_start(window),
+        )
+        report = build_sleep_report(events, window=window, limit=limit)
+        report["chain"] = self.store.stats()
+        report["source_event_count"] = len(events)
+        report["source_event_limit_reached"] = len(events) >= 50_000
+        return report
 
 
 def _mean(values: list[float]) -> float | None:
@@ -185,6 +198,10 @@ def create_app(directory: str | None = None) -> FastAPI:
     async def dashboard():
         return HTMLResponse(_dashboard_html())
 
+    @app.get("/awareness/sleep", response_class=HTMLResponse, dependencies=[Depends(operator_auth)])
+    async def sleep_dashboard():
+        return HTMLResponse(sleep_dashboard_html(SCIENTIFIC_LABEL))
+
     @app.get("/awareness/api/summary", dependencies=[Depends(operator_auth)])
     async def summary(window: str = "24h", subject_id: str = "KAIROS-production"):
         try:
@@ -195,6 +212,13 @@ def create_app(directory: str | None = None) -> FastAPI:
     @app.get("/awareness/api/evidence", dependencies=[Depends(operator_auth)])
     async def evidence(subject_id: str = "KAIROS-production", limit: int = 200):
         return {"scientific_label": SCIENTIFIC_LABEL, "events": service.store.evidence(subject_id=subject_id, limit=limit)}
+
+    @app.get("/awareness/api/sleep", dependencies=[Depends(operator_auth)])
+    async def sleep_report(window: str = "24h", subject_id: str = "KAIROS-production", limit: int = 120):
+        try:
+            return service.sleep_report(subject_id, window, limit)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/awareness/api/causal", dependencies=[Depends(operator_auth)])
     async def causal_report():
@@ -223,6 +247,7 @@ main{{max-width:1180px;margin:auto;padding:32px 20px}}h1{{font-size:24px;letter-
 .score{{font-size:34px;color:var(--accent)}}small{{color:var(--muted)}}table{{width:100%;border-collapse:collapse;margin-top:24px}}td,th{{text-align:left;border-bottom:1px solid var(--line);padding:8px}}
 pre{{white-space:pre-wrap;word-break:break-word}}a{{color:var(--accent)}}
 </style></head><body><main><h1>KAIROS AWARENESS OBSERVATORY</h1><p class="notice">{label}</p>
+<p><a href="/awareness/sleep">Open the Sleep Observatory</a></p>
 <div class="toolbar">{''.join(f'<button data-window="{window}">{window}</button>' for window in ('1h','24h','7d','30d','lifetime'))}</div>
 <div id="axes" class="axes"></div><div id="details" class="card" style="margin-top:12px"></div>
 <h2>Raw evidence</h2><table><thead><tr><th>Time</th><th>Event</th><th>Metric</th><th>Evidence</th></tr></thead><tbody id="evidence"></tbody></table>

@@ -89,6 +89,22 @@ class SovereignRuntimeTests(unittest.TestCase):
         self.assertTrue(runtime.audit.valid())
         self.assertEqual(runtime.inbox, [])
 
+    def test_sleep_observer_sees_exact_runtime_boundaries_and_is_fail_open(self):
+        runtime, _ = make_runtime()
+        runtime.sense(Observation("1", "sensor.ok", "measurement", {"value": 1}, 1.0))
+        phases = []
+        commit = runtime.sleep(lambda phase, payload: phases.append((phase, dict(payload))))
+        self.assertEqual([phase for phase, _ in phases], [RuntimePhase.NREM, RuntimePhase.REM, RuntimePhase.WAKE])
+        self.assertEqual(phases[0][1], {"observation_count": 1, "effect_count": 0})
+        self.assertTrue(phases[1][1]["audit_chain_valid"])
+        self.assertEqual(phases[2][1]["memory_sequence"], commit.sequence)
+
+        runtime.sense(Observation("2", "sensor.ok", "measurement", {"value": 2}, 1.0))
+        second = runtime.sleep(lambda _phase, _payload: (_ for _ in ()).throw(RuntimeError("observer failed")))
+        self.assertEqual(second.sequence, 2)
+        self.assertEqual(runtime.phase, RuntimePhase.WAKE)
+        self.assertTrue(runtime.audit.valid())
+
     def test_unresolved_intent_blocks_sleep(self):
         runtime, _ = make_runtime()
         runtime.sense(Observation("1", "sensor.ok", "measurement", {"value": 1}, 1.0))

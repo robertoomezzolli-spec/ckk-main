@@ -150,6 +150,25 @@ The authenticated page is `/awareness`. The JSON surfaces are:
 - `GET /awareness/api/summary?window=1h|24h|7d|30d|lifetime`
 - `GET /awareness/api/evidence?limit=200`
 
+The authenticated sleep/consolidation projection is available at
+`/awareness/sleep`. Its data surface is:
+
+- `GET /awareness/api/sleep?window=1h|24h|7d|30d|lifetime&limit=120`
+
+The projection groups redacted `OBSERVED`, `RETRIEVED`, `SLEEP_PHASE`,
+`ACTED`, `LEARNED`, `CONSOLIDATED` and `FAILED` evidence by opaque event
+reference. Runtime phase boundaries are emitted exactly when the real runtime
+enters NREM, REM and WAKE. The callback is fail-open and cannot change sleep or
+commit semantics. Older cycles without boundary telemetry remain visible but
+are explicitly labeled as cycle-summary evidence rather than exact measured
+phase timestamps.
+
+The spatial map represents causal data relationships between an experience,
+retrieval, action, learning proposal and persistent commit. It is not a
+recording of subjective imagery or hidden reasoning. Message bodies, phone
+identifiers, prompts, chain-of-thought, belief content and Observatory ground
+truth are never exported into this view.
+
 They show the five axes, metric drilldown, evidence confidence, sample count,
 last probe, last SMS result, transfer rate, false-capability rate, memory
 retention curve, self-correction rate, change-detection latency and raw

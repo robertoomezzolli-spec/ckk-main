@@ -10,7 +10,7 @@ import logging
 import os
 import threading
 import time
-from typing import Any
+from typing import Any, Mapping
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
@@ -438,7 +438,24 @@ def create_app(
             )
             with cognition_lock:
                 effect = organism.think()
-            commit = organism.sleep()
+            pending_learning_count = len(organism._pending_learning)
+
+            def observe_sleep_phase(phase: RuntimePhase, phase_payload: Mapping[str, Any]) -> None:
+                telemetry.emit(
+                    "SLEEP_PHASE",
+                    {
+                        "event_ref": structural["event_ref"],
+                        "phase": phase.value,
+                        "learning_proposal_count": pending_learning_count,
+                        **dict(phase_payload),
+                    },
+                    session_id=session_id,
+                    memory_version=(
+                        organism.runtime.memory[-1].commit_id if organism.runtime.memory else "genesis"
+                    ),
+                )
+
+            commit = organism.sleep(observe_sleep_phase)
             store.complete(
                 observation,
                 {

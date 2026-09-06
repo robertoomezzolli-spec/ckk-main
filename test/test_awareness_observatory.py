@@ -21,6 +21,7 @@ from ckk.observatory.evaluator import PassiveEvaluator  # noqa: E402
 from ckk.observatory.metrics import METRICS  # noqa: E402
 from ckk.observatory.probes import HarmlessSandboxSubject, PROBE_CLASSES, ProbeGenerator, ProbeRunner  # noqa: E402
 from ckk.observatory.service import SCIENTIFIC_LABEL, create_app as create_observatory_app  # noqa: E402
+from ckk.observatory.sleep_view import build_sleep_report  # noqa: E402
 from ckk.observatory.store import EvidenceEvent, ObservatoryStore  # noqa: E402
 from ckk.sovereign.brain import OpenAIResponsesCognition  # noqa: E402
 from ckk.sovereign.host import HostSettings, create_app as create_sovereign_app  # noqa: E402
@@ -258,6 +259,89 @@ class AwarenessObservatoryTests(unittest.TestCase):
             self.assertIn("WHATSAPP_RELAY_DELIVERY", exported)
             store.close()
 
+    def test_sleep_projection_is_provenance_bearing_and_private(self):
+        secret_text = "private conversation text"
+        phone = "491631234567"
+        events = [
+            {
+                "sequence": 1, "evidence_id": "ev-observed", "occurred_at": 10.0,
+                "event_type": "OBSERVED", "session_id": "opaque-session",
+                "payload": {
+                    "event_ref": "opaque-cycle", "sensor_class": "whatsapp", "kind": "message.text",
+                    "payload_keys": ["text"], "payload_bytes": 42, "text_length": len(secret_text),
+                    "unexpected_private_field": secret_text, "unexpected_phone": phone,
+                },
+            },
+            {
+                "sequence": 2, "evidence_id": "ev-retrieved", "occurred_at": 11.0,
+                "event_type": "RETRIEVED", "payload": {
+                    "event_ref": "opaque-cycle", "episodic_count": 3, "committed_belief_count": 2,
+                    "ckk_external_evidence_count": 1, "content_exported": False,
+                },
+            },
+            {
+                "sequence": 3, "evidence_id": "ev-nrem", "occurred_at": 12.0,
+                "event_type": "SLEEP_PHASE", "payload": {
+                    "event_ref": "opaque-cycle", "phase": "NREM", "observation_count": 1,
+                    "effect_count": 0, "learning_proposal_count": 1,
+                },
+            },
+            {
+                "sequence": 4, "evidence_id": "ev-rem", "occurred_at": 12.1,
+                "event_type": "SLEEP_PHASE", "payload": {
+                    "event_ref": "opaque-cycle", "phase": "REM", "audit_chain_valid": True,
+                    "candidate_sequence": 8, "learning_proposal_count": 1,
+                },
+            },
+            {
+                "sequence": 5, "evidence_id": "ev-wake", "occurred_at": 12.2,
+                "event_type": "SLEEP_PHASE", "payload": {
+                    "event_ref": "opaque-cycle", "phase": "WAKE", "memory_sequence": 8,
+                    "learning_proposal_count": 1,
+                },
+            },
+            {
+                "sequence": 6, "evidence_id": "ev-learned", "occurred_at": 12.3,
+                "event_type": "LEARNED", "payload": {"event_ref": "opaque-cycle", "belief_delta": 1},
+            },
+            {
+                "sequence": 7, "evidence_id": "ev-commit", "occurred_at": 12.4,
+                "event_type": "CONSOLIDATED", "memory_version": "commit-sha", "payload": {
+                    "event_ref": "opaque-cycle", "sleep_cycle": "NREM_REM_WAKE",
+                    "identity_chain_valid": True, "audit_chain_valid": True,
+                    "memory_advanced": True, "checkpoint_persisted": True,
+                },
+            },
+        ]
+        report = build_sleep_report(events, window="24h")
+        cycle = report["cycles"][0]
+        self.assertEqual(cycle["phase_source"], "runtime_boundary")
+        self.assertEqual([item["phase"] for item in cycle["phase_boundaries"]], ["NREM", "REM", "WAKE"])
+        self.assertEqual(cycle["learning"], {"proposal_count": 1, "belief_delta": 1, "committed": True})
+        self.assertEqual(cycle["consolidation"]["memory_commit"], "commit-sha")
+        self.assertEqual(cycle["evidence_ids"], [
+            "ev-observed", "ev-retrieved", "ev-nrem", "ev-rem", "ev-wake", "ev-learned", "ev-commit",
+        ])
+        encoded = json.dumps(report)
+        self.assertNotIn(secret_text, encoded)
+        self.assertNotIn(phone, encoded)
+        self.assertFalse(report["privacy"]["message_content_exported"])
+
+    def test_completed_legacy_cycle_is_labeled_as_summary_not_measured_boundaries(self):
+        report = build_sleep_report(
+            [{
+                "sequence": 1, "evidence_id": "legacy", "occurred_at": 1.0,
+                "event_type": "CONSOLIDATED", "memory_version": "commit", "payload": {
+                    "event_ref": "legacy-cycle", "sleep_cycle": "NREM_REM_WAKE",
+                    "identity_chain_valid": True, "audit_chain_valid": True,
+                    "memory_advanced": True, "checkpoint_persisted": True,
+                },
+            }],
+            window="lifetime",
+        )
+        self.assertEqual(report["cycles"][0]["phase_source"], "completed_cycle_summary")
+        self.assertEqual(report["cycles"][0]["phase_boundaries"], [])
+
     def test_normal_kairos_cycle_emits_observable_outcomes_without_content(self):
         with tempfile.TemporaryDirectory() as directory:
             sink = RecordingTelemetrySink()
@@ -293,7 +377,9 @@ class AwarenessObservatoryTests(unittest.TestCase):
                         break
                     time.sleep(0.02)
             event_types = {item["event_type"] for item in sink.events}
-            self.assertTrue({"SELF_STATE_OBSERVED", "OBSERVED", "RETRIEVED", "ACTED", "CONSOLIDATED"} <= event_types)
+            self.assertTrue({"SELF_STATE_OBSERVED", "OBSERVED", "RETRIEVED", "ACTED", "CONSOLIDATED", "SLEEP_PHASE"} <= event_types)
+            phases = [item["payload"]["phase"] for item in sink.events if item["event_type"] == "SLEEP_PHASE"]
+            self.assertEqual(phases, ["NREM", "REM", "WAKE"])
             exported = json.dumps(sink.events)
             self.assertNotIn(message_text, exported)
             self.assertNotIn("491700000000", exported)
@@ -313,6 +399,10 @@ class AwarenessObservatoryTests(unittest.TestCase):
                 self.assertEqual(dashboard.status_code, 200)
                 self.assertIn("KAIROS AWARENESS OBSERVATORY", dashboard.text)
                 self.assertIn(SCIENTIFIC_LABEL, dashboard.text)
+                sleep_dashboard = client.get("/awareness/sleep", headers={"authorization": f"Basic {auth}"})
+                self.assertEqual(sleep_dashboard.status_code, 200)
+                self.assertIn("KAIROS Schlaf-Observatorium", sleep_dashboard.text)
+                self.assertIn("keine Aufnahme subjektiver Bilder", sleep_dashboard.text)
                 rejected = client.post("/ingest/v1/events", json={})
                 self.assertEqual(rejected.status_code, 403)
                 accepted = client.post(
@@ -326,6 +416,11 @@ class AwarenessObservatoryTests(unittest.TestCase):
                 )
                 self.assertEqual(summary.status_code, 200)
                 self.assertIn("axes", summary.json())
+                sleep = client.get(
+                    "/awareness/api/sleep?window=24h", headers={"authorization": f"Basic {auth}"}
+                )
+                self.assertEqual(sleep.status_code, 200)
+                self.assertFalse(sleep.json()["privacy"]["model_reasoning_exported"])
 
 
 if __name__ == "__main__":

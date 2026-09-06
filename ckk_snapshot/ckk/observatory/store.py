@@ -221,6 +221,38 @@ class ObservatoryStore:
             result.append(item)
         return result
 
+    def event_stream(
+        self,
+        event_types: Iterable[str],
+        *,
+        subject_id: str,
+        since: float | None = None,
+        limit: int = 50_000,
+    ) -> list[dict[str, Any]]:
+        """Read a bounded projection without widening the raw-evidence API."""
+
+        selected = tuple(sorted({str(item) for item in event_types if item}))
+        if not selected:
+            return []
+        placeholders = ",".join("?" for _ in selected)
+        clauses = [f"event_type IN ({placeholders})", "subject_id=?"]
+        parameters: list[Any] = [*selected, subject_id]
+        if since is not None:
+            clauses.append("occurred_at>=?")
+            parameters.append(since)
+        parameters.append(max(1, min(int(limit), 50_000)))
+        with self._lock:
+            rows = self._evidence.execute(
+                "SELECT * FROM evidence WHERE " + " AND ".join(clauses) + " ORDER BY sequence DESC LIMIT ?",
+                parameters,
+            ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["payload"] = json.loads(item.pop("payload_json"))
+            result.append(item)
+        return result
+
     def evaluations(self, subject_id: str | None = None) -> list[dict[str, Any]]:
         sql = """SELECT v.*, e.subject_id, e.occurred_at
                  FROM evaluations v JOIN evidence e ON e.evidence_id=v.evidence_id"""

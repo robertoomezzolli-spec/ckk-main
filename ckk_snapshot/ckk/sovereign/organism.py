@@ -8,7 +8,15 @@ import json
 from typing import Protocol
 
 from .learning import HystereticLearner, LearningProposal
-from .runtime import Approval, Effect, Intent, MemoryCommit, Observation, SovereignRuntime
+from .runtime import (
+    Approval,
+    Effect,
+    Intent,
+    MemoryCommit,
+    Observation,
+    SleepPhaseObserver,
+    SovereignRuntime,
+)
 
 
 @dataclass(frozen=True)
@@ -104,13 +112,13 @@ class SovereignOrganism:
             return None
         return self.runtime.execute(approval)
 
-    def sleep(self) -> OrganismCommit:
+    def sleep(self, phase_observer: SleepPhaseObserver | None = None) -> OrganismCommit:
         """Commit runtime history, then admit only learning grounded in that wake."""
         wake_evidence = {item.observation_id for item in self.runtime.inbox}
         for proposal in self._pending_learning:
             if not set(proposal.evidence_ids).issubset(wake_evidence):
                 raise PermissionError("learning cites evidence outside current wake history")
-        runtime_commit = self.runtime.sleep()
+        runtime_commit = self.runtime.sleep(phase_observer)
         admitted_evidence = set(runtime_commit.observation_ids)
         for proposal in self._pending_learning:
             if not set(proposal.evidence_ids).issubset(admitted_evidence):

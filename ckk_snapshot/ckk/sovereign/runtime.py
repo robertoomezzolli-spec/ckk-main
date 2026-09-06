@@ -31,6 +31,26 @@ class RuntimePhase(str, Enum):
     HALTED = "HALTED"
 
 
+SleepPhaseObserver = Callable[[RuntimePhase, Mapping[str, Any]], None]
+
+
+def _notify_sleep_phase(
+    observer: SleepPhaseObserver | None,
+    phase: RuntimePhase,
+    payload: Mapping[str, Any],
+) -> None:
+    """Export phase metadata without allowing observability to alter runtime semantics."""
+
+    if observer is None:
+        return
+    try:
+        observer(phase, payload)
+    except Exception:
+        # Telemetry is deliberately fail-open. A broken observer must never
+        # interrupt consolidation or change the resulting commit.
+        return
+
+
 @dataclass(frozen=True)
 class Observation:
     observation_id: str
@@ -261,7 +281,7 @@ class SovereignRuntime:
         self.audit.append("EFFECT", effect)
         return effect
 
-    def sleep(self) -> MemoryCommit:
+    def sleep(self, phase_observer: SleepPhaseObserver | None = None) -> MemoryCommit:
         """NREM flush followed by REM invariant verification and commit."""
         if self.phase is not RuntimePhase.WAKE:
             raise RuntimeError("sleep can start only from WAKE")
@@ -270,9 +290,19 @@ class SovereignRuntime:
         self.phase = RuntimePhase.NREM
         observation_ids = tuple(item.observation_id for item in self.inbox)
         effect_ids = tuple(item.intent_id for item in self.effects)
+        _notify_sleep_phase(
+            phase_observer,
+            self.phase,
+            {"observation_count": len(observation_ids), "effect_count": len(effect_ids)},
+        )
         self.audit.append("NREM_FLUSH", {"observations": observation_ids, "effects": effect_ids})
 
         self.phase = RuntimePhase.REM
+        _notify_sleep_phase(
+            phase_observer,
+            self.phase,
+            {"audit_chain_valid": self.audit.valid(), "candidate_sequence": len(self.memory) + 1},
+        )
         if not self.audit.valid():
             self.halt("audit invariant failed")
             raise RuntimeError("REM rejected invalid audit chain")
@@ -295,4 +325,13 @@ class SovereignRuntime:
         self.effects.clear()
         self._effects_this_wake = 0
         self.phase = RuntimePhase.WAKE
+        _notify_sleep_phase(
+            phase_observer,
+            self.phase,
+            {
+                "memory_sequence": commit.sequence,
+                "observation_count": len(commit.observation_ids),
+                "effect_count": len(commit.effect_ids),
+            },
+        )
         return commit
