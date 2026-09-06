@@ -14,6 +14,8 @@ sys.path.insert(0, str(GEN))
 from expand import expand_structural_auditable  # noqa: E402
 from grammar import MAXDIM, SEEDS  # noqa: E402
 
+EVENT_IDENTITY_VERSION = "ckk-derivation-v2"
+
 
 def stable_json(value):
     return json.dumps(value, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
@@ -74,10 +76,15 @@ def main():
     parser.add_argument("--levels", type=int, default=1)
     parser.add_argument("--cap", type=int, default=1200)
     parser.add_argument("--generation-id", required=True)
-    parser.add_argument("--operator-version", default="ckk-grammar-v1")
+    parser.add_argument("--operator-version")
     args = parser.parse_args()
     if args.levels < 0 or args.cap < 1:
         raise SystemExit("levels and cap must be non-negative")
+
+    grammar_hash = hashlib.sha256((GEN / "grammar.py").read_bytes()).hexdigest()
+    operator_version = f"ckk-grammar-{grammar_hash[:12]}"
+    if args.operator_version is not None and args.operator_version != operator_version:
+        raise SystemExit("operator version does not identify the loaded grammar")
 
     pool, raw_events = expand_structural_auditable(levels=args.levels, cap=args.cap)
     seed_signatures = {seed.structural_sig() for seed in SEEDS}
@@ -122,7 +129,7 @@ def main():
         event = {
             "generation_id": args.generation_id,
             "operator": raw.operator,
-            "operator_version": args.operator_version,
+            "operator_version": operator_version,
             "inputs": inputs,
             "output": by_tuple[output_key]["id"],
             "parameters": {"arity": len(inputs)},
@@ -130,15 +137,21 @@ def main():
             "input_structural_hashes": input_hashes,
             "output_structural_hash": by_tuple[output_key]["hash"],
         }
-        event_identity = {key: value for key, value in event.items() if key != "generation_id"}
+        event_identity = {key: value for key, value in event.items()
+                          if key not in {"generation_id", "level"}}
+        event_identity["identity_version"] = EVENT_IDENTITY_VERSION
         event_hash = digest(event_identity)
         event["event_hash"] = event_hash
         event["id"] = make_id("dev", event_hash)
-        unique_events[event_hash] = event
+        # The scheduler may repeat an application at later levels. Keep its
+        # first observation, just as Derivation.event_key() does in the core.
+        unique_events.setdefault(event_hash, event)
 
     events = sorted(unique_events.values(), key=lambda item: (item["level"], item["operator"], item["id"]))
     output = {
         "generation_id": args.generation_id,
+        "grammar_hash": grammar_hash,
+        "event_identity_version": EVENT_IDENTITY_VERSION,
         "experiment": {"maxdim": MAXDIM, "levels": args.levels, "cap": args.cap},
         "self_duality": {"assessment": "NOT_EVALUATED", "equivalence_relation": None},
         "structures": structures,
@@ -149,4 +162,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

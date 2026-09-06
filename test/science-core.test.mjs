@@ -58,7 +58,9 @@ test('level-2 current-core scope contains no information-loss or self-transition
 });
 
 test('binary input arity alone is not a true confluence', () => {
-  const event = { output: 'x', event_hash: 'one', inputs: ['a', 'b'] };
+  const event = { output: 'x', event_hash: 'one', inputs: ['a', 'b'],
+    input_structural_hashes: ['ha', 'hb'], output_structural_hash: 'hx',
+    operator: 'op_product', operator_version: 'fixture', parameters: { arity: 2 }, level: 1 };
   assert.deepEqual(trueConfluences([event]), []);
   assert.deepEqual(trueConfluences([event, event]), []);
   assert.deepEqual(trueConfluences([event, { ...event, event_hash: 'two', operator: 'other' }]), [{ output: 'x', derivation_event_count: 2 }]);

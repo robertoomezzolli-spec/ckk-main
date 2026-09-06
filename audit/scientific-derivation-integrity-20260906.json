@@ -1,0 +1,54 @@
+{
+  "schema": "ckk.scientific-derivation-integrity.v2",
+  "base_commit": "4825d7ec52e95f1059069e5e7ac4848ae94757d8",
+  "branch": "fix/scientific-derivation-integrity-20260906",
+  "event_identity_version": "ckk-derivation-v2",
+  "validator_version": "science-validator-v2.0.0",
+  "kernel_sha256": {
+    "grammar.py": "afd52bc69b014d418826c400d2eb5e159ca41fb3e60fee68f8da90dcf18e89da",
+    "expand.py": "f752f0533c2640dcc9cb4cd2aca12eb4457e6339dfb55becc75f711a95939d5e"
+  },
+  "tests": {
+    "javascript": {
+      "passed": 23,
+      "failed": 0
+    },
+    "python_kernel": {
+      "passed": 15,
+      "failed": 0
+    }
+  },
+  "levels": [
+    {
+      "level": 2,
+      "states": 52,
+      "unique_events": 42,
+      "confluences": 0
+    },
+    {
+      "level": 3,
+      "states": 204,
+      "unique_events": 363,
+      "confluences": 133
+    },
+    {
+      "level": 4,
+      "states": 604,
+      "unique_events": 1543,
+      "confluences": 449
+    },
+    {
+      "level": 5,
+      "states": 1403,
+      "unique_events": 4491,
+      "confluences": 1084
+    }
+  ],
+  "scope": {
+    "live_database_tested": false,
+    "production_deployed": false,
+    "historical_artifacts_rewritten": false,
+    "physics_claims_changed": false
+  },
+  "known_separate_deployment_constraint": "scientific schema maxdim NOT NULL versus current grammar maxdim=null; see docs/SCIENTIFIC_DERIVATION_INTEGRITY_V2.md"
+}

@@ -9,6 +9,7 @@ import {
   stableStringify,
   structuralHash,
   trueConfluences,
+  EVENT_IDENTITY_VERSION,
 } from '../science/core.mjs';
 import {
   AnthropicAdapter,
@@ -260,7 +261,7 @@ export async function runPreviewCycle({
     ]);
     const grammarHash = sha256(grammarSource);
     const seedSetHash = sha256(seedFixture);
-    const generationId = `sci-v1-preview-${sha256({ workerId, grammarHash, seedSetHash, levels }).slice(0, 16)}`;
+    const generationId = `sci-v2-preview-${sha256({ workerId, grammarHash, seedSetHash, levels, eventIdentityVersion: EVENT_IDENTITY_VERSION }).slice(0, 16)}`;
     const generated = await generate(generationId, levels, `ckk-grammar-${grammarHash.slice(0, 12)}`);
     const confluences = trueConfluences(generated.derivation_events);
     await store.persistGeneration({
@@ -272,6 +273,7 @@ export async function runPreviewCycle({
       expansion_levels: levels,
       true_confluence_count: confluences.length,
       scope: {
+        event_identity_version: EVENT_IDENTITY_VERSION,
         candidate_id: candidateId,
         target_id: target.id,
         hidden_target_not_supplied_to_generator: true,

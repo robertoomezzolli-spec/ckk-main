@@ -11,6 +11,7 @@ export const FAILURE_CODES = Object.freeze([
 export const STRUCTURAL_FIELDS = Object.freeze([
   'kind', 'dim', 'order', 'sym', 'sq', 'anti', 'mult', 'bc', 'dual', 'occ',
 ]);
+export const EVENT_IDENTITY_VERSION = 'ckk-derivation-v2';
 export const SELF_DUALITY = Object.freeze({
   assessment: 'NOT_EVALUATED',
   equivalence_relation: null,
@@ -80,18 +81,27 @@ export function structuralHash(record) {
 }
 
 export function eventIdentity(event) {
-  const inputs = event.operator === 'op_product' ? [...event.inputs].sort() : [...event.inputs];
-  const inputHashes = event.operator === 'op_product'
-    ? [...event.input_structural_hashes].sort()
-    : [...event.input_structural_hashes];
+  if (!Array.isArray(event.inputs) || !Array.isArray(event.input_structural_hashes)
+    || event.inputs.length !== event.input_structural_hashes.length) {
+    throw new Error('derivation inputs and hashes must be parallel arrays');
+  }
+  const pairs = event.inputs.map((id, index) => [id, event.input_structural_hashes[index]]);
+  if (pairs.some(([id, hash]) => typeof id !== 'string' || typeof hash !== 'string')) {
+    throw new Error('derivation input ids and hashes must be strings');
+  }
+  // Sort whole pairs, just like the Python exporter. A hash must remain attached
+  // to its input. Binary operators other than product retain their input order.
+  if (event.operator === 'op_product') pairs.sort((a, b) =>
+    a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0);
   return {
+    identity_version: EVENT_IDENTITY_VERSION,
     operator: event.operator,
     operator_version: event.operator_version,
-    inputs,
+    inputs: pairs.map(([id]) => id),
     output: event.output,
     parameters: event.parameters ?? {},
-    level: Number(event.level),
-    input_structural_hashes: inputHashes,
+    // level records first observation, not the identity of an application.
+    input_structural_hashes: pairs.map(([, hash]) => hash),
     output_structural_hash: event.output_structural_hash,
   };
 }
@@ -104,7 +114,9 @@ export function trueConfluences(events) {
   const byOutput = new Map();
   for (const event of events) {
     if (!byOutput.has(event.output)) byOutput.set(event.output, new Set());
-    byOutput.get(event.output).add(event.event_hash ?? eventHash(event));
+    // Recompute: historical/replayed or caller-supplied hashes are not evidence
+    // of independent derivations.
+    byOutput.get(event.output).add(eventHash(event));
   }
   return [...byOutput.entries()]
     .filter(([, identities]) => identities.size >= 2)
@@ -172,4 +184,3 @@ export function crossDomainMatches(interpretations, structures) {
     return domains.length >= 2 ? [{ structural_hash: hash, domains, occurrences, verdict: 'STRUCTURAL_MATCH', same_mechanism: 'NOT_EVALUATED' }] : [];
   });
 }
-
