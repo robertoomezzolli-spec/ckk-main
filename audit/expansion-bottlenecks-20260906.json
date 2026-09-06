@@ -1,0 +1,574 @@
+{
+  "candidate_priority": [
+    {
+      "candidate": "Explicit structural factor descriptors for heterogeneous composition",
+      "reason": "Represents combinations currently rejected or flattened without injecting domain names.",
+      "required_decisions": [
+        "Declare product semantics and structural equivalence before counting states.",
+        "Retain existing homogeneous behavior as a projection, not an assumed full equivalence.",
+        "Test associativity, factor reversal, dual action and replay on all co-inputs.",
+        "Keep experimental generation separate from the pinned core."
+      ],
+      "success_criterion": "A previously unavailable factor distinction is preserved and supports a predefined downstream operation; extra labels or histories alone do not count."
+    },
+    {
+      "candidate": "Recurrence composition",
+      "status": "Requires declared algebra; lcm for periodic synchronous products is a model assumption, not something forced by the current order label."
+    },
+    {
+      "candidate": "Action/composition of symmetry transformations",
+      "status": "Requires a representation of actions and composition; merely adding symmetry labels would not establish new relations."
+    }
+  ],
+  "claim_limit": "Identifies expressivity boundaries of this grammar. Does not establish which extension describes nature or predict a physical discovery.",
+  "grammar_sha256": "afd52bc69b014d418826c400d2eb5e159ca41fb3e60fee68f8da90dcf18e89da",
+  "observed_boundary_conditions": [
+    null
+  ],
+  "observed_orders": [
+    0,
+    2,
+    3,
+    4
+  ],
+  "property_equality_counts": {
+    "op_boundary": {
+      "anti": {
+        "equal_to_input_0": 260
+      },
+      "bc": {
+        "equal_to_input_0": 260
+      },
+      "dim": {
+        "differs_from_all_inputs": 248,
+        "equal_to_input_0": 12
+      },
+      "dual": {
+        "equal_to_input_0": 260
+      },
+      "kind": {
+        "differs_from_all_inputs": 260
+      },
+      "mult": {
+        "equal_to_input_0": 260
+      },
+      "occ": {
+        "equal_to_input_0": 260
+      },
+      "order": {
+        "equal_to_input_0": 260
+      },
+      "sq": {
+        "equal_to_input_0": 260
+      },
+      "sym": {
+        "equal_to_input_0": 260
+      }
+    },
+    "op_close": {
+      "anti": {
+        "equal_to_input_0": 4
+      },
+      "bc": {
+        "equal_to_input_0": 4
+      },
+      "dim": {
+        "differs_from_all_inputs": 4
+      },
+      "dual": {
+        "equal_to_input_0": 4
+      },
+      "kind": {
+        "differs_from_all_inputs": 4
+      },
+      "mult": {
+        "equal_to_input_0": 4
+      },
+      "occ": {
+        "equal_to_input_0": 4
+      },
+      "order": {
+        "equal_to_input_0": 4
+      },
+      "sq": {
+        "equal_to_input_0": 4
+      },
+      "sym": {
+        "equal_to_input_0": 4
+      }
+    },
+    "op_degenerate": {
+      "anti": {
+        "equal_to_input_0": 552
+      },
+      "bc": {
+        "equal_to_input_0_1": 552
+      },
+      "dim": {
+        "equal_to_input_0": 528,
+        "equal_to_input_0_1": 24
+      },
+      "dual": {
+        "equal_to_input_0": 168,
+        "equal_to_input_0_1": 384
+      },
+      "kind": {
+        "equal_to_input_0": 552
+      },
+      "mult": {
+        "differs_from_all_inputs": 324,
+        "equal_to_input_0_1": 228
+      },
+      "occ": {
+        "equal_to_input_0": 304,
+        "equal_to_input_0_1": 248
+      },
+      "order": {
+        "equal_to_input_0": 414,
+        "equal_to_input_0_1": 138
+      },
+      "sq": {
+        "equal_to_input_0": 552
+      },
+      "sym": {
+        "differs_from_all_inputs": 552
+      }
+    },
+    "op_dual": {
+      "anti": {
+        "equal_to_input_0": 510
+      },
+      "bc": {
+        "equal_to_input_0": 510
+      },
+      "dim": {
+        "equal_to_input_0": 510
+      },
+      "dual": {
+        "differs_from_all_inputs": 510
+      },
+      "kind": {
+        "equal_to_input_0": 510
+      },
+      "mult": {
+        "equal_to_input_0": 510
+      },
+      "occ": {
+        "equal_to_input_0": 510
+      },
+      "order": {
+        "equal_to_input_0": 510
+      },
+      "sq": {
+        "equal_to_input_0": 510
+      },
+      "sym": {
+        "equal_to_input_0": 510
+      }
+    },
+    "op_exclude": {
+      "anti": {
+        "equal_to_input_0_1": 488
+      },
+      "bc": {
+        "equal_to_input_0_1": 488
+      },
+      "dim": {
+        "equal_to_input_0": 480,
+        "equal_to_input_0_1": 8
+      },
+      "dual": {
+        "equal_to_input_0": 160,
+        "equal_to_input_0_1": 328
+      },
+      "kind": {
+        "equal_to_input_0": 488
+      },
+      "mult": {
+        "equal_to_input_0": 120,
+        "equal_to_input_0_1": 368
+      },
+      "occ": {
+        "equal_to_input_1": 488
+      },
+      "order": {
+        "equal_to_input_0": 366,
+        "equal_to_input_0_1": 122
+      },
+      "sq": {
+        "equal_to_input_0_1": 488
+      },
+      "sym": {
+        "equal_to_input_0": 240,
+        "equal_to_input_0_1": 248
+      }
+    },
+    "op_fiber": {
+      "anti": {
+        "equal_to_input_0_1": 744
+      },
+      "bc": {
+        "equal_to_input_0_1": 744
+      },
+      "dim": {
+        "equal_to_input_0": 456,
+        "equal_to_input_0_1": 288
+      },
+      "dual": {
+        "equal_to_input_0_1": 744
+      },
+      "kind": {
+        "differs_from_all_inputs": 744
+      },
+      "mult": {
+        "equal_to_input_0_1": 744
+      },
+      "occ": {
+        "equal_to_input_0_1": 248,
+        "equal_to_input_1": 496
+      },
+      "order": {
+        "equal_to_input_0_1": 744
+      },
+      "sq": {
+        "equal_to_input_0_1": 744
+      },
+      "sym": {
+        "equal_to_input_0_1": 744
+      }
+    },
+    "op_fill": {
+      "anti": {
+        "equal_to_input_0": 125
+      },
+      "bc": {
+        "equal_to_input_0": 125
+      },
+      "dim": {
+        "equal_to_input_0": 125
+      },
+      "dual": {
+        "equal_to_input_0": 125
+      },
+      "kind": {
+        "differs_from_all_inputs": 125
+      },
+      "mult": {
+        "equal_to_input_0": 125
+      },
+      "occ": {
+        "equal_to_input_0": 125
+      },
+      "order": {
+        "equal_to_input_0": 125
+      },
+      "sq": {
+        "equal_to_input_0": 125
+      },
+      "sym": {
+        "equal_to_input_0": 125
+      }
+    },
+    "op_filter": {
+      "anti": {
+        "equal_to_input_0": 88
+      },
+      "bc": {
+        "equal_to_input_0": 88
+      },
+      "dim": {
+        "equal_to_input_0": 88
+      },
+      "dual": {
+        "equal_to_input_0": 88
+      },
+      "kind": {
+        "differs_from_all_inputs": 88
+      },
+      "mult": {
+        "equal_to_input_0": 88
+      },
+      "occ": {
+        "equal_to_input_0": 88
+      },
+      "order": {
+        "equal_to_input_0": 88
+      },
+      "sq": {
+        "equal_to_input_0": 88
+      },
+      "sym": {
+        "equal_to_input_0": 88
+      }
+    },
+    "op_product": {
+      "anti": {
+        "equal_to_input_0_1": 1056
+      },
+      "bc": {
+        "equal_to_input_0_1": 1056
+      },
+      "dim": {
+        "differs_from_all_inputs": 1056
+      },
+      "dual": {
+        "equal_to_input_0_1": 1056
+      },
+      "kind": {
+        "differs_from_all_inputs": 144,
+        "equal_to_input_0": 360,
+        "equal_to_input_0_1": 552
+      },
+      "mult": {
+        "equal_to_input_0_1": 1056
+      },
+      "occ": {
+        "differs_from_all_inputs": 120,
+        "equal_to_input_0": 240,
+        "equal_to_input_0_1": 456,
+        "equal_to_input_1": 240
+      },
+      "order": {
+        "equal_to_input_0_1": 1056
+      },
+      "sq": {
+        "equal_to_input_0_1": 1056
+      },
+      "sym": {
+        "equal_to_input_0_1": 1056
+      }
+    },
+    "op_weight": {
+      "anti": {
+        "equal_to_input_0": 332
+      },
+      "bc": {
+        "equal_to_input_0": 332
+      },
+      "dim": {
+        "equal_to_input_0": 332
+      },
+      "dual": {
+        "equal_to_input_0": 332
+      },
+      "kind": {
+        "differs_from_all_inputs": 332
+      },
+      "mult": {
+        "equal_to_input_0": 332
+      },
+      "occ": {
+        "equal_to_input_0": 332
+      },
+      "order": {
+        "equal_to_input_0": 332
+      },
+      "sq": {
+        "equal_to_input_0": 332
+      },
+      "sym": {
+        "equal_to_input_0": 332
+      }
+    },
+    "op_winding": {
+      "anti": {
+        "equal_to_input_0": 332
+      },
+      "bc": {
+        "equal_to_input_0": 332
+      },
+      "dim": {
+        "equal_to_input_0": 332
+      },
+      "dual": {
+        "equal_to_input_0": 332
+      },
+      "kind": {
+        "differs_from_all_inputs": 332
+      },
+      "mult": {
+        "equal_to_input_0": 332
+      },
+      "occ": {
+        "equal_to_input_0": 332
+      },
+      "order": {
+        "equal_to_input_0": 332
+      },
+      "sq": {
+        "equal_to_input_0": 332
+      },
+      "sym": {
+        "equal_to_input_0": 332
+      }
+    }
+  },
+  "property_equality_warning": "These are value comparisons, NOT native DIRECT/INHERITED verdicts or proof of causal inheritance.",
+  "scope": {
+    "cap": 20000,
+    "levels": 5,
+    "states": 1403,
+    "unique_events": 4491
+  },
+  "source_based_invariants": [
+    "Starting with canonical seeds, order stays in {0,2,3,4}: close copies it, binary compositions require equality, and other operators preserve it.",
+    "Starting with canonical seeds, bc remains None: no registered operator introduces a boundary-condition value. op_boundary changes kind/dimension instead.",
+    "The two anti=False symmetry seeds are never accepted as symmetry arguments; increasing levels cannot activate them under this registry.",
+    "Product/fiber reject unequal recurrence order or dual markers. More dimension does not remove these preconditions.",
+    "All current operators inspect scalar fields (and canonical symmetry labels), not the parts tree. Retaining event history alone cannot make factor distinctions influence later structural applications."
+  ],
+  "unused_canonical_seeds_in_run": [
+    {
+      "anti": false,
+      "bc": null,
+      "dim": 0,
+      "dual": 0,
+      "kind": "SYMMETRY",
+      "mult": 1,
+      "occ": null,
+      "order": 0,
+      "sq": 1,
+      "sym": null
+    },
+    {
+      "anti": false,
+      "bc": null,
+      "dim": 0,
+      "dual": 0,
+      "kind": "SYMMETRY",
+      "mult": 1,
+      "occ": null,
+      "order": 0,
+      "sq": -1,
+      "sym": null
+    }
+  ],
+  "witnesses": {
+    "mixed_dual_product": {
+      "inputs": [
+        {
+          "anti": null,
+          "bc": null,
+          "dim": 1,
+          "dual": 0,
+          "kind": "CYCLE",
+          "mult": 1,
+          "occ": null,
+          "order": 0,
+          "sq": null,
+          "sym": null
+        },
+        {
+          "anti": null,
+          "bc": null,
+          "dim": 1,
+          "dual": 1,
+          "kind": "CYCLE",
+          "mult": 1,
+          "occ": null,
+          "order": 0,
+          "sq": null,
+          "sym": null
+        }
+      ],
+      "output": null
+    },
+    "mixed_recurrence_product": {
+      "inputs": [
+        {
+          "anti": null,
+          "bc": null,
+          "dim": 1,
+          "dual": 0,
+          "kind": "CYCLE",
+          "mult": 1,
+          "occ": null,
+          "order": 2,
+          "sq": null,
+          "sym": null
+        },
+        {
+          "anti": null,
+          "bc": null,
+          "dim": 1,
+          "dual": 0,
+          "kind": "CYCLE",
+          "mult": 1,
+          "occ": null,
+          "order": 3,
+          "sq": null,
+          "sym": null
+        }
+      ],
+      "output": null
+    },
+    "occupancy_factor_distinction": {
+      "common_output_signature": {
+        "anti": null,
+        "bc": null,
+        "dim": 2,
+        "dual": 0,
+        "kind": "PRODUCT",
+        "mult": 1,
+        "occ": null,
+        "order": 0,
+        "sq": null,
+        "sym": null
+      },
+      "first_inputs": [
+        {
+          "anti": null,
+          "bc": null,
+          "dim": 1,
+          "dual": 0,
+          "kind": "CYCLE",
+          "mult": 1,
+          "occ": 1,
+          "order": 0,
+          "sq": null,
+          "sym": null
+        },
+        {
+          "anti": null,
+          "bc": null,
+          "dim": 1,
+          "dual": 0,
+          "kind": "CYCLE",
+          "mult": 1,
+          "occ": -1,
+          "order": 0,
+          "sq": null,
+          "sym": null
+        }
+      ],
+      "historical_parts_differ": true,
+      "interpretation": "The distinction survives in provenance but is unavailable to downstream scalar-only operators. This is a quotient design choice, not proof of an incorrect equivalence.",
+      "second_inputs": [
+        {
+          "anti": null,
+          "bc": null,
+          "dim": 1,
+          "dual": 0,
+          "kind": "CYCLE",
+          "mult": 1,
+          "occ": null,
+          "order": 0,
+          "sq": null,
+          "sym": null
+        },
+        {
+          "anti": null,
+          "bc": null,
+          "dim": 1,
+          "dual": 0,
+          "kind": "CYCLE",
+          "mult": 1,
+          "occ": null,
+          "order": 0,
+          "sq": null,
+          "sym": null
+        }
+      ]
+    }
+  }
+}
