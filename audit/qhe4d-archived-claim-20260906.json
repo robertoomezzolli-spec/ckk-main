@@ -1,0 +1,70 @@
+{
+  "repository": "robertoomezzolli-spec/ckk-main",
+  "ref": "11a512c4b95c71c55bcc6c12d11e8172e9839d5b",
+  "path": "site/public/data/run34.json",
+  "generation_id": "v6-noselfdual-563f50e328c5",
+  "node": {
+    "anti": null,
+    "boundary_condition": null,
+    "catalog_match": true,
+    "depth": 2,
+    "dim": 4,
+    "dual": 0,
+    "first_seen": "2026-08-27T12:43:53.913Z",
+    "id": "331",
+    "kind": "PRODUCT",
+    "label": "4D quantum Hall / second Chern number",
+    "last_seen": "2026-08-27T12:43:53.913Z",
+    "lifecycle": "GENERABLE",
+    "multiplicity": 1,
+    "occupancy": null,
+    "paths": 260,
+    "physics": [],
+    "recurrence_order": 0,
+    "signature": {
+      "projection": {
+        "method": "exclude-unverified-dual-2-nodes-and-incident-edges",
+        "source_commit": "a873f1c112035621def482b1fbe5c62b22dc98f39f1e83ca6eb24e5fd3805ad8",
+        "source_run_id": "33"
+      },
+      "snapshot_node": {
+        "bc": "None",
+        "depth": 2,
+        "dim": 4,
+        "dual": 0,
+        "factor": "2pi",
+        "id": 331,
+        "kind": "PRODUCT",
+        "mult": 1,
+        "occ": "None",
+        "paths": 260,
+        "phys": [
+          "4D-QHE / zweite Chernzahl"
+        ],
+        "status": "REDISCOVERED",
+        "sym": "None"
+      },
+      "source": "ckk_faecher.html",
+      "source_sha256": "a873f1c112035621def482b1fbe5c62b22dc98f39f1e83ca6eb24e5fd3805ad8"
+    },
+    "source_label": "4D-QHE / zweite Chernzahl",
+    "source_verdict": "REDISCOVERED",
+    "sq": null,
+    "symmetry": null,
+    "verdict": "REDISCOVERED"
+  },
+  "legacy_incoming_operator_labels": [
+    "snapshot_v6:0226",
+    "snapshot_v6:0512",
+    "snapshot_v6:0513",
+    "snapshot_v6:0524",
+    "snapshot_v6:0616",
+    "snapshot_v6:0617",
+    "snapshot_v6:0618",
+    "snapshot_v6:0628",
+    "snapshot_v6:0629",
+    "snapshot_v6:0891",
+    "snapshot_v6:0893"
+  ],
+  "note": "Exact archived node record. Its snapshot_v6 edge labels do not identify executable operators."
+}

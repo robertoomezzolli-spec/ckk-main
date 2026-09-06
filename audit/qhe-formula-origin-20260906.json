@@ -1,0 +1,344 @@
+{
+  "case": "archived-4d-quantum-hall-node-331",
+  "grammar_hash": "afd52bc69b014d418826c400d2eb5e159ca41fb3e60fee68f8da90dcf18e89da",
+  "formula_source_file_sha256": "17eb98b35afa0ccea3c044d54691b2b37e0c17c87b1a69932211827b7eabe01c",
+  "archive": {
+    "ref": "11a512c4b95c71c55bcc6c12d11e8172e9839d5b",
+    "path": "site/public/data/run34.json",
+    "node_id": "331",
+    "verdict": "REDISCOVERED",
+    "label": "4D quantum Hall / second Chern number"
+  },
+  "current_generation": {
+    "states": 1403,
+    "applications": 4491,
+    "validation": {
+      "clean": true,
+      "replayed": 4491
+    }
+  },
+  "reproduced_scalar_claim": {
+    "kind": "PRODUCT",
+    "dim": 4,
+    "order": 0,
+    "sym": null,
+    "sq": null,
+    "anti": null,
+    "mult": 1,
+    "bc": null,
+    "dual": 0,
+    "occ": null
+  },
+  "product_trace": {
+    "nodes": [
+      {
+        "id": "str_b7a7e5721b5fd72185ee906d",
+        "lifecycle": "GENERABLE",
+        "signature": {
+          "kind": "PRODUCT",
+          "dim": 4,
+          "order": 0,
+          "sym": null,
+          "sq": null,
+          "anti": null,
+          "mult": 1,
+          "bc": null,
+          "dual": 0,
+          "occ": null
+        }
+      },
+      {
+        "id": "str_841ad344a45ad80644a45888",
+        "lifecycle": "GENERABLE",
+        "signature": {
+          "kind": "PRODUCT",
+          "dim": 2,
+          "order": 0,
+          "sym": null,
+          "sq": null,
+          "anti": null,
+          "mult": 1,
+          "bc": null,
+          "dual": 0,
+          "occ": null
+        }
+      },
+      {
+        "id": "str_0a4acef7b0ace802d391182d",
+        "lifecycle": "GENERABLE",
+        "signature": {
+          "kind": "CYCLE",
+          "dim": 1,
+          "order": 0,
+          "sym": null,
+          "sq": null,
+          "anti": null,
+          "mult": 1,
+          "bc": null,
+          "dual": 0,
+          "occ": null
+        }
+      },
+      {
+        "id": "str_338a335ef2a8d22e06081ec6",
+        "lifecycle": "ADMITTED",
+        "signature": {
+          "kind": "RECURRENCE",
+          "dim": 0,
+          "order": 0,
+          "sym": null,
+          "sq": null,
+          "anti": null,
+          "mult": 1,
+          "bc": null,
+          "dual": 0,
+          "occ": null
+        }
+      }
+    ],
+    "events": [
+      {
+        "generation_id": "qhe-formula-origin-20260906",
+        "operator": "op_close",
+        "operator_version": "ckk-grammar-afd52bc69b01",
+        "inputs": [
+          "str_338a335ef2a8d22e06081ec6"
+        ],
+        "output": "str_0a4acef7b0ace802d391182d",
+        "parameters": {
+          "arity": 1
+        },
+        "level": 1,
+        "input_structural_hashes": [
+          "4ef791a369940f6390862064dfdcbc6c24c760e63d649ca4d7ac8b9dfe9cabbd"
+        ],
+        "output_structural_hash": "08434f90e7ecb8a52004c14998e14e7a0b8548c82448e9014776c6b162e0fdbf",
+        "event_hash": "398c1cfda25cb57ce6f2070687d51be838764ba2f102f033319af701748ad1d0",
+        "id": "dev_bc7605618ddb1a55cb0ab4ce"
+      },
+      {
+        "generation_id": "qhe-formula-origin-20260906",
+        "operator": "op_product",
+        "operator_version": "ckk-grammar-afd52bc69b01",
+        "inputs": [
+          "str_0a4acef7b0ace802d391182d",
+          "str_0a4acef7b0ace802d391182d"
+        ],
+        "output": "str_841ad344a45ad80644a45888",
+        "parameters": {
+          "arity": 2
+        },
+        "level": 2,
+        "input_structural_hashes": [
+          "08434f90e7ecb8a52004c14998e14e7a0b8548c82448e9014776c6b162e0fdbf",
+          "08434f90e7ecb8a52004c14998e14e7a0b8548c82448e9014776c6b162e0fdbf"
+        ],
+        "output_structural_hash": "bd4305502cb2d3f0a9ffd39c31f0b840a2b04e2acd839b1f3b7799c4a8a0d12d",
+        "event_hash": "2e81e5d47d0ce604426c2340ef830326a64c36523cd4a1af412e0006927e7f82",
+        "id": "dev_266e60dede38d1748f131dd1"
+      },
+      {
+        "generation_id": "qhe-formula-origin-20260906",
+        "operator": "op_product",
+        "operator_version": "ckk-grammar-afd52bc69b01",
+        "inputs": [
+          "str_841ad344a45ad80644a45888",
+          "str_841ad344a45ad80644a45888"
+        ],
+        "output": "str_b7a7e5721b5fd72185ee906d",
+        "parameters": {
+          "arity": 2
+        },
+        "level": 3,
+        "input_structural_hashes": [
+          "bd4305502cb2d3f0a9ffd39c31f0b840a2b04e2acd839b1f3b7799c4a8a0d12d",
+          "bd4305502cb2d3f0a9ffd39c31f0b840a2b04e2acd839b1f3b7799c4a8a0d12d"
+        ],
+        "output_structural_hash": "f151510efab7f81b2c06bbd6f0f99b0e512446e898415807953cf81be22c54be",
+        "event_hash": "6035462a5e690e815501739b3061090c402e13937832d2ed1987d28fa911c83c",
+        "id": "dev_daafe92f59bc40c2a5c41f9d"
+      }
+    ]
+  },
+  "integer_trace": {
+    "nodes": [
+      {
+        "id": "str_30e62d64572b728f7c3eac35",
+        "lifecycle": "GENERABLE",
+        "signature": {
+          "kind": "INTEGER",
+          "dim": 4,
+          "order": 0,
+          "sym": null,
+          "sq": null,
+          "anti": null,
+          "mult": 1,
+          "bc": null,
+          "dual": 0,
+          "occ": null
+        }
+      },
+      {
+        "id": "str_b7a7e5721b5fd72185ee906d",
+        "lifecycle": "GENERABLE",
+        "signature": {
+          "kind": "PRODUCT",
+          "dim": 4,
+          "order": 0,
+          "sym": null,
+          "sq": null,
+          "anti": null,
+          "mult": 1,
+          "bc": null,
+          "dual": 0,
+          "occ": null
+        }
+      },
+      {
+        "id": "str_841ad344a45ad80644a45888",
+        "lifecycle": "GENERABLE",
+        "signature": {
+          "kind": "PRODUCT",
+          "dim": 2,
+          "order": 0,
+          "sym": null,
+          "sq": null,
+          "anti": null,
+          "mult": 1,
+          "bc": null,
+          "dual": 0,
+          "occ": null
+        }
+      },
+      {
+        "id": "str_0a4acef7b0ace802d391182d",
+        "lifecycle": "GENERABLE",
+        "signature": {
+          "kind": "CYCLE",
+          "dim": 1,
+          "order": 0,
+          "sym": null,
+          "sq": null,
+          "anti": null,
+          "mult": 1,
+          "bc": null,
+          "dual": 0,
+          "occ": null
+        }
+      },
+      {
+        "id": "str_338a335ef2a8d22e06081ec6",
+        "lifecycle": "ADMITTED",
+        "signature": {
+          "kind": "RECURRENCE",
+          "dim": 0,
+          "order": 0,
+          "sym": null,
+          "sq": null,
+          "anti": null,
+          "mult": 1,
+          "bc": null,
+          "dual": 0,
+          "occ": null
+        }
+      }
+    ],
+    "events": [
+      {
+        "generation_id": "qhe-formula-origin-20260906",
+        "operator": "op_close",
+        "operator_version": "ckk-grammar-afd52bc69b01",
+        "inputs": [
+          "str_338a335ef2a8d22e06081ec6"
+        ],
+        "output": "str_0a4acef7b0ace802d391182d",
+        "parameters": {
+          "arity": 1
+        },
+        "level": 1,
+        "input_structural_hashes": [
+          "4ef791a369940f6390862064dfdcbc6c24c760e63d649ca4d7ac8b9dfe9cabbd"
+        ],
+        "output_structural_hash": "08434f90e7ecb8a52004c14998e14e7a0b8548c82448e9014776c6b162e0fdbf",
+        "event_hash": "398c1cfda25cb57ce6f2070687d51be838764ba2f102f033319af701748ad1d0",
+        "id": "dev_bc7605618ddb1a55cb0ab4ce"
+      },
+      {
+        "generation_id": "qhe-formula-origin-20260906",
+        "operator": "op_product",
+        "operator_version": "ckk-grammar-afd52bc69b01",
+        "inputs": [
+          "str_0a4acef7b0ace802d391182d",
+          "str_0a4acef7b0ace802d391182d"
+        ],
+        "output": "str_841ad344a45ad80644a45888",
+        "parameters": {
+          "arity": 2
+        },
+        "level": 2,
+        "input_structural_hashes": [
+          "08434f90e7ecb8a52004c14998e14e7a0b8548c82448e9014776c6b162e0fdbf",
+          "08434f90e7ecb8a52004c14998e14e7a0b8548c82448e9014776c6b162e0fdbf"
+        ],
+        "output_structural_hash": "bd4305502cb2d3f0a9ffd39c31f0b840a2b04e2acd839b1f3b7799c4a8a0d12d",
+        "event_hash": "2e81e5d47d0ce604426c2340ef830326a64c36523cd4a1af412e0006927e7f82",
+        "id": "dev_266e60dede38d1748f131dd1"
+      },
+      {
+        "generation_id": "qhe-formula-origin-20260906",
+        "operator": "op_product",
+        "operator_version": "ckk-grammar-afd52bc69b01",
+        "inputs": [
+          "str_841ad344a45ad80644a45888",
+          "str_841ad344a45ad80644a45888"
+        ],
+        "output": "str_b7a7e5721b5fd72185ee906d",
+        "parameters": {
+          "arity": 2
+        },
+        "level": 3,
+        "input_structural_hashes": [
+          "bd4305502cb2d3f0a9ffd39c31f0b840a2b04e2acd839b1f3b7799c4a8a0d12d",
+          "bd4305502cb2d3f0a9ffd39c31f0b840a2b04e2acd839b1f3b7799c4a8a0d12d"
+        ],
+        "output_structural_hash": "f151510efab7f81b2c06bbd6f0f99b0e512446e898415807953cf81be22c54be",
+        "event_hash": "6035462a5e690e815501739b3061090c402e13937832d2ed1987d28fa911c83c",
+        "id": "dev_daafe92f59bc40c2a5c41f9d"
+      },
+      {
+        "generation_id": "qhe-formula-origin-20260906",
+        "operator": "op_winding",
+        "operator_version": "ckk-grammar-afd52bc69b01",
+        "inputs": [
+          "str_b7a7e5721b5fd72185ee906d"
+        ],
+        "output": "str_30e62d64572b728f7c3eac35",
+        "parameters": {
+          "arity": 1
+        },
+        "level": 4,
+        "input_structural_hashes": [
+          "f151510efab7f81b2c06bbd6f0f99b0e512446e898415807953cf81be22c54be"
+        ],
+        "output_structural_hash": "0ccb949f1323fea6daf10bd77976b123057381ca358b578e3717e6ad4ec77e35",
+        "event_hash": "36de4fdcc36487e6f3ac5643d255c1c9a05e6fb3141a64ec3188aea121c48532",
+        "id": "dev_66145ae2e4edf37cbc7fbf8a"
+      }
+    ]
+  },
+  "displayed_formula": "C₂ = 1/(8π²) ∫M₄ Tr(F ∧ F) ∈ ℤ",
+  "displayed_formula_origin": "PHYSICS ANNOTATION",
+  "formula_derivation_status": "NOT_ESTABLISHED_BY_THIS_AUDIT",
+  "missing_proof_obligations": [
+    "Construct the mathematical realization of the generated carrier and its admissible maps.",
+    "Construct and compute a characteristic invariant with explicit assumptions, normalization and proof.",
+    "Derive a response relation and specify how its quantities correspond to measurements.",
+    "Test a frozen independent case and counterexamples without fitting the generator to the answer."
+  ],
+  "limits": [
+    "This regenerates matching scalar states under the current kernel; it does not recover the original Run 34 operator history.",
+    "A valid structural trace does not alone compute a Chern invariant or a Hall response.",
+    "Absence of a formula field is not proof that no invariant can be reconstructed from generated relations.",
+    "The archive verdict is preserved; this audit neither manufactures a native DIRECT verdict nor changes a catalog match."
+  ]
+}
