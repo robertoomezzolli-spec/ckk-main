@@ -11,6 +11,7 @@ import base64
 from dataclasses import dataclass, field, replace
 import hashlib
 import hmac
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
@@ -61,6 +62,8 @@ class MediaVault:
         {
             "application/pdf",
             "text/plain",
+            "text/html",
+            "application/xhtml+xml",
             "image/jpeg",
             "image/png",
             "audio/ogg",
@@ -193,6 +196,98 @@ class TextExtractor(Protocol):
     def extract(self, content: bytes, mime_type: str, filename: str) -> Mapping[str, Any]: ...
 
 
+class _VisibleHTMLParser(HTMLParser):
+    """Render bounded document text without executing or fetching anything."""
+
+    ignored_tags = frozenset({
+        "script", "style", "noscript", "template", "svg", "canvas", "iframe",
+        "object", "embed",
+    })
+    block_tags = frozenset({
+        "address", "article", "aside", "blockquote", "body", "dd", "details",
+        "div", "dl", "dt", "fieldset", "figcaption", "figure", "footer",
+        "form", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hr",
+        "li", "main", "nav", "ol", "p", "pre", "section", "summary", "table",
+        "tbody", "tfoot", "thead", "tr", "ul",
+    })
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.ignored_depth = 0
+        self.ignored_closures: list[str] = []
+        self.pre_depth = 0
+        self.anchor_targets: list[str | None] = []
+
+    @staticmethod
+    def _hidden(attributes: dict[str, str]) -> bool:
+        style = re.sub(r"\s+", "", attributes.get("style", "").lower())
+        return (
+            "hidden" in attributes
+            or attributes.get("aria-hidden", "").lower() == "true"
+            or "display:none" in style
+            or "visibility:hidden" in style
+        )
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        attributes = {str(key).lower(): str(value or "") for key, value in attrs}
+        if tag in self.ignored_tags or self._hidden(attributes):
+            self.ignored_depth += 1
+            self.ignored_closures.append(tag)
+            return
+        if self.ignored_depth:
+            return
+        if tag in self.block_tags or tag == "br":
+            self.parts.append("\n")
+        if tag == "li":
+            self.parts.append("- ")
+        if tag == "pre":
+            self.pre_depth += 1
+        if tag == "a":
+            href = attributes.get("href", "").strip()[:500]
+            scheme = parse.urlparse(href).scheme.lower()
+            self.anchor_targets.append(href if href and scheme in {"", "http", "https"} else None)
+        if tag == "img" and attributes.get("alt"):
+            self.parts.append(f"[image: {attributes['alt'][:500]}]")
+        if tag in {"td", "th"}:
+            self.parts.append("\t")
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() in {"br", "hr"}:
+            self.parts.append("\n")
+        elif tag.lower() == "img":
+            attributes = {str(key).lower(): str(value or "") for key, value in attrs}
+            if not self.ignored_depth and attributes.get("alt"):
+                self.parts.append(f"[image: {attributes['alt'][:500]}]")
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if self.ignored_closures and tag == self.ignored_closures[-1]:
+            self.ignored_closures.pop()
+            self.ignored_depth = max(0, self.ignored_depth - 1)
+            return
+        if self.ignored_depth:
+            return
+        if tag == "a" and self.anchor_targets:
+            target = self.anchor_targets.pop()
+            if target:
+                self.parts.append(f" [{target}]")
+        if tag == "pre":
+            self.pre_depth = max(0, self.pre_depth - 1)
+        if tag in self.block_tags:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self.ignored_depth:
+            return
+        self.parts.append(data if self.pre_depth else re.sub(r"\s+", " ", data))
+
+    def text(self) -> str:
+        lines = [line.strip() for line in "".join(self.parts).replace("\r", "").split("\n")]
+        return "\n".join(line for line in lines if line)
+
+
 @dataclass
 class PdfOcrTextExtractor:
     """Extract PDF text first and OCR only pages without usable text."""
@@ -222,9 +317,42 @@ class PdfOcrTextExtractor:
                 "methods": ["utf8_decode"],
                 "truncated": truncated,
             }
+        if mime_type in {"text/html", "application/xhtml+xml"}:
+            return self._extract_html(content)
         if mime_type in {"image/jpeg", "image/png"}:
             return self._extract_image(content, mime_type)
         raise MediaProcessingError("media_type_not_extractable")
+
+    def _extract_html(self, content: bytes) -> Mapping[str, Any]:
+        head = content[:8192].decode("ascii", errors="ignore")
+        match = re.search(r"(?i)<meta[^>]+charset\s*=\s*['\"]?([A-Za-z0-9._-]+)", head)
+        encoding = (match.group(1) if match else "utf-8").lower()
+        if encoding not in {"utf-8", "utf8", "iso-8859-1", "windows-1252"}:
+            encoding = "utf-8"
+        try:
+            source = content.decode(encoding, errors="replace")
+        except LookupError:
+            source = content.decode("utf-8", errors="replace")
+        parser = _VisibleHTMLParser()
+        try:
+            parser.feed(source)
+            parser.close()
+        except Exception as exc:
+            raise MediaProcessingError("html_parse_failed") from exc
+        text, truncated = self._bounded_text(parser.text())
+        if not text.strip():
+            raise MediaProcessingError("html_has_no_visible_text")
+        return {
+            "extracted_text": text,
+            "page_count": 1,
+            "processed_pages": 1,
+            "text_pages": 1,
+            "ocr_pages": 0,
+            "methods": ["html_visible_text"],
+            "truncated": truncated,
+            "external_resources_fetched": False,
+            "active_content_executed": False,
+        }
 
     def _extract_pdf(self, content: bytes, filename: str) -> Mapping[str, Any]:
         if not content.startswith(b"%PDF-"):
@@ -410,7 +538,10 @@ class MediaObservationEnricher:
             if not content:
                 raise MediaProcessingError("media_empty")
             actual_mime = remote_mime if remote_mime != "application/octet-stream" else response_mime
-            if actual_mime not in {"application/pdf", "text/plain", "image/jpeg", "image/png"}:
+            if actual_mime not in {
+                "application/pdf", "text/plain", "text/html", "application/xhtml+xml",
+                "image/jpeg", "image/png",
+            }:
                 raise MediaProcessingError("media_type_not_extractable")
             for expected in (envelope.expected_sha256, str(metadata.get("sha256") or "")):
                 if expected and not digest_matches(content, expected):

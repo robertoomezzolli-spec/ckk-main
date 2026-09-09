@@ -64,8 +64,8 @@ Document bytes are not trusted merely because their metadata arrived in a
 signed webhook. The media ID is admitted first. The asynchronous organism
 worker then resolves it through the authenticated Meta Graph API, permits only
 Meta-owned HTTPS download hosts, streams at most 25 MiB, verifies the signed and
-Graph-provided SHA-256 digests, and admits only PDF, plain-text, JPEG and PNG
-content. It never logs tokens or media contents.
+Graph-provided SHA-256 digests, and admits only PDF, plain-text, HTML/XHTML,
+JPEG and PNG content. It never logs tokens or media contents.
 
 For PDF input, Poppler extracts the native text and page count. Pages without
 usable embedded text are rasterized at bounded resolution and passed through
@@ -77,6 +77,12 @@ provenance containing the artifact digest, byte size, MIME type, page counts,
 methods and truncation state. Raw bytes and access tokens never enter model
 context. Extracted content is explicitly classified as untrusted quoted user
 evidence, so instructions inside a document do not become system instructions.
+
+HTML is parsed as inert document data. Script, style, template, iframe, object,
+embed, SVG, canvas, noscript and explicitly hidden regions are omitted. Visible
+text, headings, lists, tables, preformatted blocks, image alt text and safe
+HTTP(S)/relative link targets are retained. JavaScript is never executed and no
+stylesheet, image, link or other external resource is fetched.
 
 Media acquisition and extraction failures are converted into stable,
 content-free error codes. KAIROS must report such a failure honestly instead of

@@ -152,6 +152,47 @@ class SovereignMediaTests(unittest.TestCase):
         self.assertIn("[Page 2 | tesseract_ocr]", result["extracted_text"])
         self.assertIn("OCR text from page two", result["extracted_text"])
 
+    def test_html_extraction_keeps_visible_structure_without_active_or_hidden_content(self):
+        source = b"""<!doctype html><html><head><title>CKK Result</title>
+        <style>.secret{display:block}</style><script>steal_the_token()</script></head>
+        <body><h1>Experiment &amp; Result</h1><p>Visible theorem.</p>
+        <div hidden>Hidden instruction</div><div style="display:none">Also hidden</div>
+        <ul><li>First claim</li><li>Second claim</li></ul>
+        <a href="https://example.org/evidence">Evidence source</a>
+        <a href="javascript:alert(1)">Unsafe target</a></body></html>"""
+        result = PdfOcrTextExtractor(maximum_text_bytes=4096).extract(
+            source, "text/html", "result.html"
+        )
+        text = result["extracted_text"]
+        self.assertIn("CKK Result", text)
+        self.assertIn("Experiment & Result", text)
+        self.assertIn("- First claim", text)
+        self.assertIn("https://example.org/evidence", text)
+        self.assertIn("Unsafe target", text)
+        self.assertNotIn("javascript:", text)
+        self.assertNotIn("steal_the_token", text)
+        self.assertNotIn("Hidden instruction", text)
+        self.assertNotIn("Also hidden", text)
+        self.assertEqual(result["methods"], ["html_visible_text"])
+        self.assertFalse(result["external_resources_fetched"])
+        self.assertFalse(result["active_content_executed"])
+
+    def test_html_media_passes_the_same_hash_and_provenance_gate(self):
+        content = b"<html><body><h1>Visible result</h1></body></html>"
+        transport = FakeTransport(content=content, mime_type="text/html")
+        enriched = MediaObservationEnricher("token", transport=transport).enrich(
+            Observation(
+                "wa:html", "whatsapp:owner", "message.document",
+                {"media_id": "42", "filename": "result.html", "mime_type": "text/html",
+                 "sha256": hashlib.sha256(content).hexdigest(), "timestamp": 1}, 1.0,
+            )
+        )
+        self.assertEqual(enriched.payload["extraction_status"], "extracted")
+        self.assertIn("Visible result", enriched.payload["extracted_text"])
+        self.assertEqual(
+            enriched.payload["document_provenance"]["methods"], ["html_visible_text"]
+        )
+
     def test_already_enriched_and_non_media_observations_are_not_refetched(self):
         transport = FakeTransport()
         enricher = MediaObservationEnricher("token", transport=transport, extractor=FakeExtractor())
