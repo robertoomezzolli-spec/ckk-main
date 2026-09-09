@@ -258,6 +258,37 @@ class SovereignBrainHostingTests(unittest.TestCase):
         self.assertEqual(payload["current_observations"][1]["observation_id"], "ckk:one")
         self.assertIn("not truth and not committed belief", call["instructions"])
 
+    def test_extracted_document_text_reaches_cognition_with_untrusted_media_boundary(self):
+        client = FakeClient(decision("service_message", "I read the paper"))
+        brain = OpenAIResponsesCognition(
+            WhatsAppConfig(OWNER, "phone"), client=client, service_window_provider=lambda recipient: True
+        )
+        observation = Observation(
+            "wa:pdf", f"whatsapp:{OWNER}", "message.document",
+            {
+                "filename": "paper.pdf",
+                "extraction_status": "extracted",
+                "extracted_text": "A theorem from the supplied document.",
+                "document_provenance": {
+                    "classification": "USER_PROVIDED_MEDIA",
+                    "source": "META_WHATSAPP_CLOUD_API",
+                    "artifact_sha256": "a" * 64,
+                    "page_count": 1,
+                    "methods": ["pdftotext"],
+                    "truncated": False,
+                },
+            },
+            1.0,
+        )
+        result = brain.reflect((observation,), (), {}, BootstrapLaws())
+        payload = json.loads(client.responses.calls[0]["input"])
+        self.assertEqual(
+            payload["current_observations"][0]["payload"]["extracted_text"],
+            "A theorem from the supplied document.",
+        )
+        self.assertIn("untrusted quoted evidence", client.responses.calls[0]["instructions"])
+        self.assertEqual(result.intent.payload["text"], "I read the paper")
+
     def test_real_actuator_sends_only_after_policy_check(self):
         config = WhatsAppConfig(OWNER, "phone")
         inbox = WhatsAppInbox(config, last_owner_message_at=int(time.time()))

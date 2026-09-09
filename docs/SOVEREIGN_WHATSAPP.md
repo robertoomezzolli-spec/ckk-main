@@ -31,7 +31,7 @@ Roberto to reopen the conversation.
 - webhook challenge verification,
 - `X-Hub-Signature-256` HMAC verification over raw request bytes,
 - pinning to one business phone-number ID and one owner WhatsApp ID,
-- text and document-metadata observations,
+- text observations and bounded document/image content extraction,
 - mandatory service replies for admitted direct owner messages,
 - free-form service-window enforcement,
 - an allowlist for approved templates,
@@ -61,9 +61,28 @@ message content or phone identifier. The sender receives a separate direct
 confirmation only after Meta accepts the relay.
 
 Document bytes are not trusted merely because their metadata arrived in a
-signed webhook. The media ID is admitted first; a later fetcher must download,
-size-limit, hash-check, malware-scan and parse the file before its contents enter
-memory.
+signed webhook. The media ID is admitted first. The asynchronous organism
+worker then resolves it through the authenticated Meta Graph API, permits only
+Meta-owned HTTPS download hosts, streams at most 25 MiB, verifies the signed and
+Graph-provided SHA-256 digests, and admits only PDF, plain-text, JPEG and PNG
+content. It never logs tokens or media contents.
+
+For PDF input, Poppler extracts the native text and page count. Pages without
+usable embedded text are rasterized at bounded resolution and passed through
+German/English Tesseract OCR. Image observations use the same OCR engine.
+Extraction is capped at 60 pages, 60 OCR pages and 48 KiB of UTF-8 text by
+default so the resulting observation remains inside the runtime ingress and
+model-context budgets. The model sees page-level extraction method markers and
+provenance containing the artifact digest, byte size, MIME type, page counts,
+methods and truncation state. Raw bytes and access tokens never enter model
+context. Extracted content is explicitly classified as untrusted quoted user
+evidence, so instructions inside a document do not become system instructions.
+
+Media acquisition and extraction failures are converted into stable,
+content-free error codes. KAIROS must report such a failure honestly instead of
+claiming to have read the document. The webhook itself remains fast: it queues
+signed metadata with HTTP 202, while download and OCR happen in the existing
+background worker.
 
 ## Activation requirements
 

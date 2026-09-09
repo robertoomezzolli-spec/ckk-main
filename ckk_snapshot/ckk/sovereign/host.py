@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from .brain import OpenAIResponsesCognition
 from .knowledge import CKKKnowledgeClient
+from .media import MediaObservationEnricher, PdfOcrTextExtractor, media_summary
 from .organism import SovereignOrganism
 from .runtime import CapabilityPolicy, IngressPolicy, Observation, RuntimePhase, SovereignRuntime
 from .research_tools import SealedResearchToolRegistry
@@ -127,6 +128,11 @@ class HostSettings:
     ckk_adapter_url: str = ""
     ckk_adapter_token: str = ""
     ckk_maximum_results: int = 6
+    meta_graph_api_version: str = "v23.0"
+    media_maximum_bytes: int = 25 * 1024 * 1024
+    media_maximum_pages: int = 60
+    media_maximum_text_bytes: int = 48 * 1024
+    media_maximum_ocr_pages: int = 60
 
     @classmethod
     def from_env(cls) -> "HostSettings":
@@ -158,6 +164,15 @@ class HostSettings:
             ckk_adapter_url=os.getenv("CKK_ADAPTER_URL", ""),
             ckk_adapter_token=os.getenv("CKK_ADAPTER_TOKEN", ""),
             ckk_maximum_results=max(1, min(10, int(os.getenv("CKK_MAXIMUM_RESULTS", "6")))),
+            meta_graph_api_version=os.getenv("META_GRAPH_API_VERSION", "v23.0"),
+            media_maximum_bytes=max(
+                1024, min(25 * 1024 * 1024, int(os.getenv("MEDIA_MAXIMUM_BYTES", str(25 * 1024 * 1024))))
+            ),
+            media_maximum_pages=max(1, min(100, int(os.getenv("MEDIA_MAXIMUM_PAGES", "60")))),
+            media_maximum_text_bytes=max(
+                1024, min(52 * 1024, int(os.getenv("MEDIA_MAXIMUM_TEXT_BYTES", str(48 * 1024))))
+            ),
+            media_maximum_ocr_pages=max(0, min(60, int(os.getenv("MEDIA_MAXIMUM_OCR_PAGES", "60")))),
         )
 
 
@@ -180,6 +195,7 @@ def build_organism(
         "config": config,
         "inbox": inbox,
         "access_token": settings.whatsapp_access_token,
+        "graph_api_version": settings.meta_graph_api_version,
     }
     if transport is not None:
         actuator_args["transport"] = transport
@@ -225,6 +241,7 @@ def create_app(
     transport: Any = None,
     telemetry: TelemetrySink | None = None,
     knowledge: CKKKnowledgeClient | None = None,
+    media_enricher: MediaObservationEnricher | None = None,
 ):
     settings = settings or HostSettings.from_env()
     os.makedirs(os.path.dirname(os.path.abspath(settings.state_path)), exist_ok=True)
@@ -236,6 +253,16 @@ def create_app(
         maximum_results=settings.ckk_maximum_results,
     )
     organism, inbox = build_organism(settings, store, client, transport, knowledge)
+    media_enricher = media_enricher or MediaObservationEnricher(
+        access_token=settings.whatsapp_access_token,
+        graph_api_version=settings.meta_graph_api_version,
+        maximum_bytes=settings.media_maximum_bytes,
+        extractor=PdfOcrTextExtractor(
+            maximum_pages=settings.media_maximum_pages,
+            maximum_text_bytes=settings.media_maximum_text_bytes,
+            maximum_ocr_pages=settings.media_maximum_ocr_pages,
+        ),
+    )
     if telemetry is None and settings.observatory_ingest_url:
         telemetry = HttpTelemetrySink(
             settings.observatory_ingest_url,
@@ -416,6 +443,19 @@ def create_app(
         )
         logger.info("observation processing started event_ref=%s kind=%s", event_ref, observation.kind)
         try:
+            if observation.kind in {"message.document", "message.image"}:
+                observation = media_enricher.enrich(observation)
+                extraction = media_summary(observation)
+                telemetry.emit("MEDIA_EXTRACTED", {"event_ref": structural["event_ref"], **extraction}, session_id=session_id)
+                logger.info(
+                    "media processing completed event_ref=%s status=%s pages=%s ocr_pages=%s text_bytes=%s error_code=%s",
+                    event_ref,
+                    extraction["status"],
+                    extraction["processed_pages"],
+                    extraction["ocr_pages"],
+                    extraction["extracted_text_bytes"],
+                    extraction["error_code"],
+                )
             if observation.sensor.startswith("whatsapp:") and observation.payload.get("timestamp") is not None:
                 timestamp = int(observation.payload["timestamp"])
                 inbox.record_message(observation.sensor.removeprefix("whatsapp:"), timestamp)

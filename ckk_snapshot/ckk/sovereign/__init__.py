@@ -41,7 +41,14 @@ from .learning import (  # noqa: F401
     HystereticLearner,
     LearningProposal,
 )
-from .media import MediaArtifact, MediaEnvelope, MediaVault  # noqa: F401
+from .media import (  # noqa: F401
+    MediaArtifact,
+    MediaEnvelope,
+    MediaObservationEnricher,
+    MediaProcessingError,
+    MediaVault,
+    PdfOcrTextExtractor,
+)
 from .organism import (  # noqa: F401
     BootstrapLaws,
     CognitionResult,
