@@ -1,0 +1,58 @@
+{
+  "seed_version": "canonical-replacement-v1.0.0",
+  "domain": "PHYSICS",
+  "status": "OPEN_HARD_GATE",
+  "title": "Derive canonical replacement without importing collapse",
+  "statement": "Reality-level record formation is not established until the kernel derives a native many-to-one effective transition that converts unresolved alternatives into one persistent distinguishable record without importing a measurement postulate, Bell/Born target, thermal bath, Hamiltonian, temperature, or external random selector.",
+  "known_results": {
+    "partner_memory_blocking": {
+      "result": "p_block(N)=1/(2N-3) for the explicitly specified uniform random-pair scheduler",
+      "classification": "EXACT_COMBINATORIAL_CONTROL",
+      "physics_claim": "NONE",
+      "warning": "Do not identify 1/5 or its N-scaling with a measured natural constant."
+    },
+    "swap_hamiltonian": {
+      "result": "H=J P_swap preserves singlet weight because [H,P_-]=0",
+      "classification": "NEGATIVE_CONTROL",
+      "warning": "Switching J to zero can stop interaction but does not select or purify an already entangled state."
+    },
+    "landauer": {
+      "result": "beta Q = h + DeltaI + D under the stated open-system assumptions",
+      "classification": "ACCOUNTING_IDENTITY",
+      "warning": "Landauer constrains the cost of logically irreversible erasure/reset; it does not choose an outcome."
+    }
+  },
+  "target": {
+    "name": "canonical_replacement",
+    "input_state": "X=(S,E,R,M,controller_if_any)",
+    "required_effect": "At the effective record level, at least two previously distinguishable admissible alternatives map to one persistent record class.",
+    "required_provenance": "The transition rule must be derived from existing native primitives or be reported as MISSING_OPERATOR. A newly proposed primitive must be labelled non-native and must not count as closure.",
+    "required_output": [
+      "formal transition rule",
+      "proof or exhaustive finite certificate of many-to-one behavior",
+      "proof that the selected record is persistent under the declared future dynamics",
+      "explicit distinction between record formation and outcome selection",
+      "information-flow ledger showing what is exported, retained, or erased",
+      "at least one parameter-free observable generated before external comparison"
+    ]
+  },
+  "forbidden_shortcuts": [
+    "Treat partner blocking as collapse.",
+    "Treat decoherence or reduced-state diagonalisation as single-outcome selection.",
+    "Use Landauer heat as an outcome selector.",
+    "Insert projective measurement or Born sampling as the missing operator.",
+    "Import a thermal bath, beta, k_B T, Hamiltonian, metric, spacetime dimension, Standard Model group, CODATA value, or target natural constant as a seed.",
+    "Use pi-pattern numerology or post-hoc matching to known constants.",
+    "Add external randomness without deriving its physical status.",
+    "Call a coarse-graining or observer ignorance map fundamental erasure without tracking the global record."
+  ],
+  "kill_criteria": [
+    "If all native transitions remain one-to-one on the complete autonomous state, canonical replacement is not derived.",
+    "If apparent many-to-one behavior disappears after omitted environment/controller/history variables are restored, fail.",
+    "If a unique outcome requires an externally supplied selector, fail.",
+    "If the only quantitative output is a scheduler-dependent algorithmic ratio with no independently defined physical observable, do not promote it to a natural constant.",
+    "If the construction requires the thermodynamic quantities it claims to derive, fail for circularity."
+  ],
+  "success_criterion": "A frozen kernel generates a new parameter-free observable or distribution from the native transition law; the value is sealed before any external measurement/lookup and is subsequently testable.",
+  "research_question": "Does the existing Faecher grammar already contain a derivation path to canonical_replacement, or does exhaustive closure return MISSING_OPERATOR?"
+}
