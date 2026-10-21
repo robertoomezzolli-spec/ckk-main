@@ -1,0 +1,34 @@
+name: Runtime semantics audit
+on:
+  push:
+    branches: [fix/runtime-conditions-2026-10-21]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Source snapshot
+        run: |
+          mkdir -p /tmp/runtime-audit
+          git rev-parse HEAD > /tmp/runtime-audit/commit.txt
+          git archive HEAD > /tmp/runtime-audit/source.tar
+      - name: Run integration audit when present
+        run: |
+          if [ -f scripts/runtime_semantics_audit.py ]; then
+            python -m pip install pytest numpy scipy networkx
+            python scripts/runtime_semantics_audit.py --output /tmp/runtime-audit
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-audit-${{ github.sha }}
+          path: /tmp/runtime-audit/
+          retention-days: 14
